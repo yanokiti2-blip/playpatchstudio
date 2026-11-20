@@ -1,0 +1,2124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>PlayPatch Studio — Web & OpenSCAD Customizer Edition</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --bg-main: #0b0f19;
+      --bg-panel: #111827;
+      --bg-card: #1e293b;
+      --border: #334155;
+      --accent: #38bdf8;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      background: var(--bg-main);
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #334155;
+      height: 6px;
+      border-radius: 999px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      border: 2px solid #0f172a;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    }
+    .dpad-btn {
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .dpad-btn:active, .dpad-btn.pressed {
+      background: rgba(56, 189, 248, 0.45) !important;
+      border-color: #38bdf8 !important;
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hidden File Input for External Import -->
+  <input type="file" id="fileInput" accept=".html,.htm,.txt,.js,.scad" class="hidden" />
+
+  <!-- ================= SINGLE-ROW COMPACT TOP HEADER (h-11 / 44px) ================= -->
+  <header class="h-11 bg-slate-900 border-b border-slate-800 px-2 sm:px-3 flex items-center justify-between shrink-0 gap-1.5 z-30">
+    <!-- Left: Brand, Filename Badge, Mode Badge -->
+    <div class="flex items-center gap-1.5 min-w-0">
+      <div class="w-6 h-6 rounded-md bg-gradient-to-br from-sky-400 to-indigo-600 flex items-center justify-center font-bold text-slate-950 text-xs shrink-0 shadow">P</div>
+      <span class="font-bold text-xs tracking-tight truncate hidden lg:inline text-slate-100">PlayPatch</span>
+      <button id="fileBadge" onclick="openSaveModal()" class="cursor-pointer text-[11px] mono bg-slate-800/90 hover:bg-slate-800 text-sky-300 border border-slate-700 px-2 py-0.5 rounded truncate max-w-[110px] sm:max-w-[180px] flex items-center gap-1" title="クリックしてブラウザ内保存・保存済み一覧を開く">
+        <span id="fileBadgeText" class="truncate">untitled</span>
+      </button>
+      <button id="modeBadge" onclick="openSettingsModal()" class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 shrink-0 transition" title="クリックして設定・モード切替">待機中</button>
+    </div>
+
+    <!-- Right: Compact Utility Controls -->
+    <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
+      <button id="btnUndo" onclick="undoCode()" disabled class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-35 text-xs border border-slate-700 flex items-center gap-1 transition" title="元に戻す (Undo)">
+        <span>↺</span><span class="hidden xl:inline">戻す</span>
+      </button>
+
+      <button onclick="openSaveModal()" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs border border-slate-700 flex items-center gap-1 transition" title="ブラウザ内の保存済み一覧 / ファイル読込">
+        <span>📂</span><span class="hidden sm:inline">開く</span>
+        <span id="savedCountBadgeHeader" class="text-[10px] bg-slate-700 text-sky-300 px-1 rounded-full mono">0</span>
+      </button>
+
+      <button onclick="openSaveModal()" class="px-2.5 py-1 rounded bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs flex items-center gap-1 transition shadow-sm" title="ブラウザ内に保存・プロジェクト管理">
+        <span>💾</span><span class="hidden sm:inline">保存</span>
+      </button>
+
+      <button onclick="reloadActivePreview()" class="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1 transition shadow-sm" title="プレビュー再実行 / 3Dモデル同期更新">
+        <span>🔄</span><span class="hidden sm:inline">更新</span>
+      </button>
+
+      <button onclick="togglePreviewCustomizerDrawer()" id="btnHeaderCustomizer" class="hidden px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-semibold text-xs items-center gap-1 transition" title="プレビュー画面上にカスタマイザードロワーを開閉">
+        <span>🎛</span><span class="hidden md:inline">カスタム</span>
+        <span id="headerParamBadge" class="text-[10px] bg-amber-500/30 text-amber-200 px-1 rounded-full mono">0</span>
+      </button>
+
+      <button onclick="openSettingsModal()" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs flex items-center gap-1 transition" title="設定・モード切替・Ochafik連携・クリア">
+        <span>⚙️</span><span class="hidden lg:inline">設定</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= MAIN WORKSPACE (100% HEIGHT BELOW HEADER) ================= -->
+  <div class="flex-1 flex overflow-hidden relative">
+
+    <!-- Left Column: Patch, Customizer, Code Editor, Logs (4 Tabs) -->
+    <div id="leftPane" class="w-full md:w-[460px] lg:w-[520px] xl:w-[560px] bg-slate-900 md:border-r border-slate-800 flex flex-col shrink-0 h-full">
+
+      <!-- Desktop Sub-navigation Tabs (4 Tabs) -->
+      <div class="hidden md:flex border-b border-slate-800 bg-slate-950/60 px-2 pt-1.5 gap-1 shrink-0 overflow-x-auto">
+        <button onclick="switchLeftTab('patch')" id="dTab-patch" class="px-3 py-1.5 text-xs font-semibold rounded-t-lg border-b-2 border-sky-400 text-sky-300 bg-slate-900 flex items-center gap-1 shrink-0">
+          <span>⚡ パッチ置換</span>
+        </button>
+        <button onclick="switchLeftTab('tweak')" id="dTab-tweak" class="px-3 py-1.5 text-xs font-semibold rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1 shrink-0">
+          <span>🎛 カスタマイザー</span>
+          <span id="paramCountBadgeDesktop" class="text-[10px] bg-slate-800 text-sky-300 px-1.5 py-0.2 rounded-full">0</span>
+        </button>
+        <button onclick="switchLeftTab('code')" id="dTab-code" class="px-3 py-1.5 text-xs font-semibold rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1 shrink-0">
+          <span>📝 コード</span>
+        </button>
+        <button onclick="switchLeftTab('log')" id="dTab-log" class="px-3 py-1.5 text-xs font-semibold rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1 shrink-0">
+          <span>📋 ログ</span>
+          <span id="logCountBadgeDesktop" class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded-full">0</span>
+        </button>
+      </div>
+
+      <!-- Panel 1: Multi-line Patch -->
+      <section id="panel-patch" class="flex-1 flex flex-col p-3 gap-2.5 overflow-y-auto">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+            <span>⚡ 複数行一括パッチ置換</span>
+            <span id="matchBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-normal">検索待ち</span>
+          </h2>
+          <label class="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer select-none">
+            <input type="checkbox" id="fuzzyToggle" checked onchange="syncFuzzySetting(this.checked)" class="rounded bg-slate-800 border-slate-600 text-sky-500" />
+            <span>空白・インデント揺らぎ許容</span>
+          </label>
+        </div>
+
+        <!-- Search Target -->
+        <div class="flex-1 flex flex-col min-h-[120px]">
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-[11px] font-semibold text-amber-300">🔍 置換前の範囲（何行でも指定可）</label>
+            <div class="flex gap-1">
+              <button onclick="pasteToField('patchSearch')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">📋 貼付</button>
+              <button onclick="document.getElementById('patchSearch').value='';checkPatchMatch();" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700">クリア</button>
+            </div>
+          </div>
+          <textarea id="patchSearch" oninput="checkPatchMatch()" placeholder="修正したい元のコード範囲をここに貼り付け..." class="w-full flex-1 bg-slate-950 border border-slate-700 focus:border-amber-400 rounded-lg p-2.5 text-xs mono text-slate-100 outline-none resize-none leading-relaxed"></textarea>
+        </div>
+
+        <!-- Replace With -->
+        <div class="flex-1 flex flex-col min-h-[120px]">
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-[11px] font-semibold text-emerald-300">✨ 置換後の新しいコード</label>
+            <div class="flex gap-1">
+              <button onclick="pasteToField('patchReplace')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">📋 貼付</button>
+              <button onclick="document.getElementById('patchReplace').value='';" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700">クリア</button>
+            </div>
+          </div>
+          <textarea id="patchReplace" placeholder="新しいコードをここに貼り付け（削除したい場合は空欄）..." class="w-full flex-1 bg-slate-950 border border-slate-700 focus:border-emerald-400 rounded-lg p-2.5 text-xs mono text-slate-100 outline-none resize-none leading-relaxed"></textarea>
+        </div>
+
+        <div class="flex gap-2 pt-1 shrink-0">
+          <button onclick="applyPatch(false)" id="btnApplyPatch" class="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg transition active:scale-[0.99]">
+            ⚡ 一発置換して反映
+          </button>
+          <button onclick="applyPatch(true)" class="px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700" title="一致するすべての箇所を置換">
+            全置換
+          </button>
+        </div>
+      </section>
+
+      <!-- Panel 2: Customizer & Quick Tweaker -->
+      <section id="panel-tweak" class="flex-1 hidden flex-col overflow-hidden">
+        <div class="p-2.5 bg-slate-950/60 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs font-bold text-slate-200">🎛 カスタマイザー / 数値調整</span>
+            <span id="tweakModeTag" class="text-[10px] px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">Auto</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <input type="text" id="paramFilter" oninput="renderCustomizerUI()" placeholder="項目を検索..." class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 w-28 sm:w-36 outline-none focus:border-sky-400" />
+            <button onclick="toggleAllSections(true)" class="text-[11px] px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" title="すべて展開">展開</button>
+            <button onclick="toggleAllSections(false)" class="text-[11px] px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" title="すべて折りたたむ">折畳</button>
+          </div>
+        </div>
+
+        <div id="customizerContainer" class="flex-1 overflow-y-auto p-2.5 space-y-2.5"></div>
+      </section>
+
+      <!-- Panel 3: Code Editor (Left: Paste, Copy All, Clear All | Right: Line Count & Apply) -->
+      <section id="panel-code" class="flex-1 hidden flex-col overflow-hidden">
+        <div class="p-2 bg-slate-950/70 border-b border-slate-800 flex items-center justify-between gap-1.5 shrink-0 flex-wrap">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button onclick="handlePasteButton()" class="px-2.5 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1 shadow">
+              <span>📥</span><span>貼り付け</span>
+            </button>
+            <button id="btnCopyAll" onclick="copyAllCode()" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold text-xs border border-slate-700 flex items-center gap-1">
+              <span>📋</span><span>全コピー</span>
+            </button>
+            <button onclick="clearWorkspace()" class="px-2.5 py-1.5 rounded bg-rose-950/80 hover:bg-rose-900 text-rose-200 font-semibold text-xs border border-rose-800/70 flex items-center gap-1" title="コードを全消去して白紙にする（↺戻すで復元可能）">
+              <span>🗑</span><span>全消去</span>
+            </button>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span id="codeStats" class="text-[11px] mono text-slate-400">0行</span>
+            <button onclick="runPreview(true)" class="px-2.5 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs">▶ 反映</button>
+          </div>
+        </div>
+
+        <!-- Non-blocking Paste Confirmation Bar -->
+        <div id="pasteConfirmBar" class="hidden bg-indigo-950/90 border-b border-indigo-700 px-3 py-2 items-center justify-between gap-2 text-xs shrink-0">
+          <span class="text-indigo-200">既存のコードがあります。どう貼り付けますか？</span>
+          <div class="flex gap-1.5 shrink-0">
+            <button onclick="confirmPasteAction('replace')" class="px-2.5 py-1 rounded bg-indigo-500 hover:bg-indigo-400 text-white font-bold">上書き置換</button>
+            <button onclick="confirmPasteAction('append')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600">末尾に追加</button>
+            <button onclick="hidePasteConfirm()" class="px-2 py-1 rounded text-slate-400 hover:text-white">キャンセル</button>
+          </div>
+        </div>
+
+        <textarea id="codeEditor" oninput="onCodeEditorInput()" spellcheck="false" placeholder="ここにHTML/JSコード、またはOpenSCAD (.scad) コードを貼り付けるか、「📂 開く」から保存済みデータを読み込んでください。" class="flex-1 w-full bg-slate-950 text-slate-100 mono p-3 text-xs leading-relaxed outline-none resize-none"></textarea>
+
+        <!-- Mobile Symbol Bar -->
+        <div class="bg-slate-900 border-t border-slate-800 px-2 py-1.5 flex items-center gap-1 overflow-x-auto shrink-0">
+          <span class="text-[10px] text-slate-500 mr-1 shrink-0">記号:</span>
+          <button onclick="insertSymbol('{')" class="px-2 py-1 rounded bg-slate-800 text-xs mono">{</button>
+          <button onclick="insertSymbol('}')" class="px-2 py-1 rounded bg-slate-800 text-xs mono">}</button>
+          <button onclick="insertSymbol('(')" class="px-2 py-1 rounded bg-slate-800 text-xs mono">(</button>
+          <button onclick="insertSymbol(')')" class="px-2 py-1 rounded bg-slate-800 text-xs mono">)</button>
+          <button onclick="insertSymbol('[')" class="px-2 py-1 rounded bg-slate-800 text-xs mono">[</button>
+          <button onclick="insertSymbol(']')" class="px-2 py-1 rounded bg-slate-800 text-xs mono">]</button>
+          <button onclick="insertSymbol('=')" class="px-2 py-1 rounded bg-slate-800 text-xs mono">=</button>
+          <button onclick="insertSymbol(';')" class="px-2 py-1 rounded bg-slate-800 text-xs mono">;</button>
+          <button onclick="insertSymbol('&quot;')" class="px-2 py-1 rounded bg-slate-800 text-xs mono">"</button>
+          <button onclick="insertSymbol('// ')" class="px-2 py-1 rounded bg-slate-800 text-xs mono">//</button>
+          <button onclick="insertSymbol('/* [Section] */')" class="px-2 py-1 rounded bg-slate-800 text-xs mono shrink-0">/*[Section]*/</button>
+        </div>
+      </section>
+
+      <!-- Panel 4: Console Log -->
+      <section id="panel-log" class="flex-1 hidden flex-col overflow-hidden">
+        <div class="p-2 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between shrink-0">
+          <span class="text-xs font-bold text-slate-300">📋 コンソール＆解析ログ</span>
+          <button onclick="clearLogs()" class="text-xs px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">クリア</button>
+        </div>
+        <div id="logContainer" class="flex-1 overflow-y-auto p-2.5 space-y-1.5 mono text-xs bg-slate-950"></div>
+      </section>
+    </div>
+
+    <!-- ================= RIGHT / PREVIEW PANE (ZERO EXTRA BARS — 100% RENDER AREA) ================= -->
+    <div id="rightPane" class="hidden md:flex flex-1 flex-col bg-slate-950 h-full overflow-hidden relative">
+
+      <!-- Main Stage Area (Occupies 100% of Right Pane) -->
+      <div class="flex-1 relative overflow-hidden flex w-full h-full">
+
+        <!-- Empty State Guidance -->
+        <div id="emptyStateView" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-950 z-10">
+          <div class="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-2xl mb-3">✨</div>
+          <h3 class="text-sm font-bold text-slate-200 mb-1">コードが空です（白紙ワークスペース）</h3>
+          <p class="text-xs text-slate-400 max-w-md leading-relaxed mb-4">
+            「📝 コード」タブからHTML/JSやOpenSCAD（<code class="text-sky-300">.scad</code>）コードを貼り付けるか、ブラウザ内の保存済みリストから読み込んでください。
+          </p>
+          <div class="flex flex-wrap justify-center gap-2">
+            <button onclick="handlePasteButton()" class="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow">
+              <span>📥</span><span>クリップボードから貼り付け</span>
+            </button>
+            <button onclick="openSaveModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 text-xs font-semibold border border-slate-700 flex items-center gap-1.5">
+              <span>📂</span><span>ブラウザ内保存一覧 / ファイル読込</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Web Preview Iframe (100% full height) -->
+        <iframe id="webPreviewFrame" class="w-full h-full border-0 bg-white hidden" sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-pointer-lock"></iframe>
+
+        <!-- OpenSCAD (Ochafik WASM) Container (100% full height, no extra status bars) -->
+        <div id="scadViewContainer" class="w-full h-full hidden flex-col relative bg-slate-950">
+          <iframe id="ochafikFrame" class="w-full h-full flex-1 border-0 bg-slate-950" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; xr-spatial-tracking"></iframe>
+        </div>
+
+        <!-- Slide-over Customizer Drawer inside Preview (Direct Parameter Controls) -->
+        <aside id="previewCustomizerDrawer" class="hidden absolute top-0 right-0 bottom-0 w-80 sm:w-96 max-w-[92%] bg-slate-900/95 backdrop-blur-md border-l border-slate-700 flex-col h-full z-20 shadow-2xl">
+          <div class="p-2.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-bold text-amber-300">🎛 カスタマイザー</span>
+              <span id="drawerParamCount" class="text-[10px] bg-slate-800 text-sky-300 px-1.5 py-0.5 rounded-full mono">0</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <button onclick="reloadActivePreview()" class="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold">🔄 3D反映</button>
+              <button onclick="togglePreviewCustomizerDrawer()" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">✕</button>
+            </div>
+          </div>
+          <div id="drawerCustomizerHost" class="flex-1 overflow-y-auto p-2.5 space-y-2.5"></div>
+        </aside>
+
+        <!-- Virtual Gamepad Overlay (Default OFF, toggled in Settings) -->
+        <div id="virtualGamepad" class="hidden absolute bottom-4 inset-x-4 pointer-events-none flex items-end justify-between z-30">
+          <!-- D-Pad -->
+          <div class="pointer-events-auto grid grid-cols-3 gap-1.5 w-36 h-36 bg-slate-900/60 backdrop-blur p-2 rounded-2xl border border-slate-700/70">
+            <div></div>
+            <button data-key="ArrowUp" data-code="ArrowUp" data-kc="38" class="dpad-btn rounded-xl bg-slate-800/80 border border-slate-600 text-white font-bold flex items-center justify-center text-base">▲</button>
+            <div></div>
+            <button data-key="ArrowLeft" data-code="ArrowLeft" data-kc="37" class="dpad-btn rounded-xl bg-slate-800/80 border border-slate-600 text-white font-bold flex items-center justify-center text-base">◀</button>
+            <div class="rounded-lg bg-slate-950/60 flex items-center justify-center text-[9px] text-slate-500">D-PAD</div>
+            <button data-key="ArrowRight" data-code="ArrowRight" data-kc="39" class="dpad-btn rounded-xl bg-slate-800/80 border border-slate-600 text-white font-bold flex items-center justify-center text-base">▶</button>
+            <div></div>
+            <button data-key="ArrowDown" data-code="ArrowDown" data-kc="40" class="dpad-btn rounded-xl bg-slate-800/80 border border-slate-600 text-white font-bold flex items-center justify-center text-base">▼</button>
+            <div></div>
+          </div>
+          <!-- Action Buttons -->
+          <div class="pointer-events-auto flex gap-2.5 items-center bg-slate-900/60 backdrop-blur p-2.5 rounded-2xl border border-slate-700/70">
+            <button data-key="Enter" data-code="Enter" data-kc="13" class="dpad-btn w-14 h-14 rounded-full bg-indigo-600/80 border-2 border-indigo-400 text-white font-bold text-xs flex flex-col items-center justify-center">
+              <span>B</span><span class="text-[9px] font-normal">Enter</span>
+            </button>
+            <button data-key=" " data-code="Space" data-kc="32" class="dpad-btn w-16 h-16 rounded-full bg-rose-600/80 border-2 border-rose-400 text-white font-bold text-sm flex flex-col items-center justify-center">
+              <span>A</span><span class="text-[9px] font-normal">Space</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MOBILE BOTTOM NAVIGATION (5 TABS) ================= -->
+  <nav class="md:hidden h-13 bg-slate-900 border-t border-slate-800 grid grid-cols-5 shrink-0 z-30 py-1">
+    <button onclick="switchMobileView('play')" id="mNav-play" class="flex flex-col items-center justify-center gap-0.5 text-slate-400">
+      <span class="text-sm">▶</span>
+      <span class="text-[10px] font-semibold">プレビュー</span>
+    </button>
+    <button onclick="switchMobileView('patch')" id="mNav-patch" class="flex flex-col items-center justify-center gap-0.5 text-sky-400">
+      <span class="text-sm">⚡</span>
+      <span class="text-[10px] font-semibold">パッチ置換</span>
+    </button>
+    <button onclick="switchMobileView('tweak')" id="mNav-tweak" class="flex flex-col items-center justify-center gap-0.5 text-slate-400 relative">
+      <span class="text-sm">🎛</span>
+      <span class="text-[10px] font-semibold">カスタム</span>
+      <span id="paramCountBadgeMobile" class="absolute top-0.5 right-2.5 text-[9px] bg-sky-600 text-white px-1 rounded-full">0</span>
+    </button>
+    <button onclick="switchMobileView('code')" id="mNav-code" class="flex flex-col items-center justify-center gap-0.5 text-slate-400">
+      <span class="text-sm">📝</span>
+      <span class="text-[10px] font-semibold">コード</span>
+    </button>
+    <button onclick="switchMobileView('log')" id="mNav-log" class="flex flex-col items-center justify-center gap-0.5 text-slate-400">
+      <span class="text-sm">📋</span>
+      <span class="text-[10px] font-semibold">ログ</span>
+    </button>
+  </nav>
+
+  <!-- ================= IN-BROWSER SAVE & PROJECT MANAGER MODAL (💾 保存 / 📂 開く) ================= -->
+  <div id="saveModal" onclick="if(event.target===this)closeSaveModal()" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-4 space-y-4 shadow-2xl max-h-[90dvh] flex flex-col">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="text-base">💾</span>
+          <h3 class="text-sm font-bold text-slate-100">ブラウザ内保存 ＆ プロジェクト管理</h3>
+        </div>
+        <button onclick="closeSaveModal()" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs">✕</button>
+      </div>
+
+      <!-- 1. Primary Action: Save Inside Browser (No File Download) -->
+      <div class="bg-slate-950/90 border border-sky-500/40 rounded-xl p-3 space-y-2.5 shrink-0">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-sky-300 flex items-center gap-1.5">
+            <span>📌 ブラウザ内に保存（ファイル出力なし）</span>
+          </label>
+          <span class="text-[10px] text-slate-400">ブラウザのローカル領域に記憶されます</span>
+        </div>
+        <div class="flex gap-2">
+          <input type="text" id="saveFileName" placeholder="保存名を入力 (例: 三味線スタンドv2)" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 mono outline-none focus:border-sky-400" />
+          <button onclick="saveProjectToBrowser()" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center gap-1.5 shrink-0 shadow-lg active:scale-95 transition">
+            <span>📌</span><span>ブラウザに保存</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Saved Projects List in Browser -->
+      <div class="flex-1 flex flex-col min-h-[160px] overflow-hidden">
+        <div class="flex items-center justify-between mb-1.5 shrink-0">
+          <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+            <span>📚 保存済みコード一覧（ブラウザ内）</span>
+            <span id="savedListCountBadge" class="text-[10px] bg-slate-800 text-sky-300 px-2 py-0.5 rounded-full mono">0件</span>
+          </span>
+          <span class="text-[10px] text-slate-400">クリックでいつでも呼び出し可能</span>
+        </div>
+        <div id="browserProjectsList" class="flex-1 overflow-y-auto space-y-2 pr-1 bg-slate-950/50 border border-slate-800/80 rounded-xl p-2.5">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- 3. Secondary Collapsible Section: External File Import / Export -->
+      <details class="bg-slate-950/60 border border-slate-800 rounded-xl px-3 py-2 shrink-0 group">
+        <summary class="text-xs font-semibold text-slate-400 hover:text-slate-200 cursor-pointer select-none flex items-center justify-between">
+          <span>📤 外部ファイルの読み込み・書き出し（必要な場合のみ）</span>
+          <span class="text-[10px] text-slate-500 group-open:rotate-180 transition-transform">▼</span>
+        </summary>
+        <div class="pt-3 pb-1 space-y-2 border-t border-slate-800/80 mt-2">
+          <button onclick="triggerFileOpen();closeSaveModal();" class="w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs flex items-center justify-center gap-2">
+            <span>📂</span><span>端末内のファイル (.html / .scad / .txt) を読み込む</span>
+          </button>
+          <div class="grid grid-cols-2 gap-1.5 pt-1">
+            <button onclick="downloadCodeAs('.scad', false)" class="py-2 rounded-lg bg-amber-600/90 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center gap-1">
+              <span>🧊</span><span>.scad 出力</span>
+            </button>
+            <button onclick="downloadCodeAs('.scad', true)" class="py-2 rounded-lg bg-amber-950/90 hover:bg-amber-900 text-amber-200 border border-amber-700/80 font-semibold text-xs flex items-center justify-center gap-1">
+              <span>✨</span><span>Ochafik互換 .scad 出力</span>
+            </button>
+            <button onclick="downloadCodeAs('.html')" class="py-2 rounded-lg bg-sky-700 hover:bg-sky-600 text-white font-bold text-xs flex items-center justify-center gap-1">
+              <span>🌐</span><span>.html 出力</span>
+            </button>
+            <button onclick="downloadCodeAs('.txt')" class="py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs flex items-center justify-center gap-1">
+              <span>📄</span><span>.txt 出力</span>
+            </button>
+          </div>
+          <button onclick="shareCodeFile()" class="w-full py-2 rounded-lg bg-indigo-600/90 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-2">
+            <span>📤</span><span>スマホ共有 / ファイルアプリへ外部保存</span>
+          </button>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ================= DEDICATED SETTINGS MODAL (⚙️ 設定) ================= -->
+  <div id="settingsModal" onclick="if(event.target===this)closeSettingsModal()" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-4 space-y-4 shadow-2xl max-h-[90dvh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <div class="flex items-center gap-2">
+          <span class="text-base">⚙️</span>
+          <h3 class="text-sm font-bold text-slate-100">環境設定・ツールメニュー</h3>
+        </div>
+        <button onclick="closeSettingsModal()" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs">✕</button>
+      </div>
+
+      <!-- 1. Runtime Mode Selection -->
+      <div class="space-y-1.5">
+        <label class="text-xs font-bold text-sky-300 block">1. 実行・プレビューモード</label>
+        <div class="grid grid-cols-3 gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <button onclick="setRuntimeMode('auto')" id="modeBtn-auto" class="py-2 rounded-lg text-xs font-semibold bg-sky-600 text-white transition">自動判定</button>
+          <button onclick="setRuntimeMode('web')" id="modeBtn-web" class="py-2 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 transition">🌐 Web</button>
+          <button onclick="setRuntimeMode('scad')" id="modeBtn-scad" class="py-2 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 transition">🧊 OpenSCAD</button>
+        </div>
+      </div>
+
+      <!-- 2. Web Preview Options -->
+      <div class="space-y-2 bg-slate-950/70 border border-slate-800 rounded-xl p-3">
+        <div class="text-xs font-bold text-indigo-300">2. Webプレビュー設定</div>
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <div class="text-xs font-semibold text-slate-200">🎮 仮想ゲームパッド表示</div>
+            <div class="text-[11px] text-slate-400">画面上に十字キーとA/Bボタンを表示（初期値: OFF）</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" id="settingsGamepadToggle" onchange="toggleGamepad(this.checked)" class="sr-only peer" />
+            <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-sky-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- 3. OpenSCAD (Ochafik) Integration Options -->
+      <div class="space-y-2.5 bg-slate-950/70 border border-slate-800 rounded-xl p-3">
+        <div class="text-xs font-bold text-amber-300">3. OpenSCAD (Ochafik) 連携設定</div>
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <div class="text-xs font-semibold text-slate-200">数値変更時に3Dモデルを自動更新</div>
+            <div class="text-[11px] text-slate-400">スライダーや選択肢の変更時にOchafikへ自動同期します</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" id="autoSyncOchafik" checked class="sr-only peer" />
+            <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-sky-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+          </label>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+          <button onclick="openOchafikExternal();closeSettingsModal();" class="py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow">
+            <span>🚀</span><span>別タブでOchafikを開く</span>
+          </button>
+          <button onclick="copyNormalizedScad();" class="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 font-semibold text-xs flex items-center justify-center gap-1.5">
+            <span>📋</span><span>互換整形済SCADをコピー</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. Editor & Patch Options -->
+      <div class="space-y-2.5 bg-slate-950/70 border border-slate-800 rounded-xl p-3">
+        <div class="text-xs font-bold text-emerald-300">4. エディタ・パッチ設定</div>
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <div class="text-xs font-semibold text-slate-200">空白・インデント揺らぎ許容</div>
+            <div class="text-[11px] text-slate-400">スペース数や改行コードの差異を吸収して置換</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" id="settingsFuzzyToggle" checked onchange="syncFuzzySetting(this.checked)" class="sr-only peer" />
+            <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-sky-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+          <div class="text-xs font-semibold text-slate-200">コード文字サイズ (<span id="fontSizeLabel" class="mono text-sky-300">12px</span>)</div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="changeFontSize(-1)" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold border border-slate-700">A-</button>
+            <button onclick="changeFontSize(1)" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold border border-slate-700">A+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Workspace Reset / Clear -->
+      <div class="pt-1 border-t border-slate-800 flex items-center justify-between gap-2">
+        <button onclick="clearWorkspace();closeSettingsModal();" class="w-full py-2.5 rounded-xl bg-rose-950/80 hover:bg-rose-900 text-rose-200 border border-rose-800/80 font-bold text-xs flex items-center justify-center gap-1.5 transition">
+          <span>🗑</span><span>作業中コードを全消去（白紙に戻す）</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-12 left-1/2 -translate-x-1/2 bg-slate-800 border border-sky-500/60 text-slate-100 px-3.5 py-2 rounded-xl shadow-2xl text-xs font-semibold opacity-0 pointer-events-none transition-opacity duration-200 z-50"></div>
+
+  <script>
+    // =========================================================================
+    // Application State & Storage Keys
+    // =========================================================================
+    const STORAGE_KEY_CODE = 'playpatch_studio_code_v3';
+    const STORAGE_KEY_NAME = 'playpatch_studio_filename_v3';
+    const STORAGE_KEY_PROJECTS = 'playpatch_saved_projects_v1';
+
+    let currentCode = '';
+    let currentFileName = 'untitled';
+    let savedProjects = []; // [{ id, name, code, mode, lines, updatedAt }]
+    let undoStack = [];
+    let runtimeMode = 'auto'; // 'auto' | 'web' | 'scad'
+    let gamepadEnabled = false; // Default OFF
+    let editorFontSize = 12;
+    let parsedParameters = [];
+    let collapsedSections = {};
+    let pendingClipboardText = '';
+    let ochafikSyncTimer = null;
+
+    // =========================================================================
+    // Initialization
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedCode = localStorage.getItem(STORAGE_KEY_CODE);
+      const savedName = localStorage.getItem(STORAGE_KEY_NAME);
+
+      currentCode = savedCode !== null ? savedCode : '';
+      currentFileName = savedName || 'untitled';
+
+      loadSavedProjectsFromStorage();
+
+      const editor = document.getElementById('codeEditor');
+      editor.value = currentCode;
+      updateFileBadgeUI(currentFileName);
+
+      setupDragAndDrop();
+      setupFileInput();
+      setupVirtualGamepadEvents();
+      updateAllViews(true);
+    });
+
+    function updateFileBadgeUI(name) {
+      currentFileName = name || 'untitled';
+      const badgeText = document.getElementById('fileBadgeText');
+      if (badgeText) badgeText.textContent = currentFileName;
+      const saveInput = document.getElementById('saveFileName');
+      if (saveInput && currentFileName !== 'untitled') {
+        saveInput.value = currentFileName;
+      }
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.remove('opacity-0');
+      t.classList.add('opacity-100');
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => {
+        t.classList.remove('opacity-100');
+        t.classList.add('opacity-0');
+      }, 2400);
+    }
+
+    function pushUndo(prevCode) {
+      if (prevCode === undefined) prevCode = currentCode;
+      if (undoStack.length > 0 && undoStack[undoStack.length - 1] === prevCode) return;
+      undoStack.push(prevCode);
+      if (undoStack.length > 30) undoStack.shift();
+      document.getElementById('btnUndo').disabled = undoStack.length === 0;
+    }
+
+    function undoCode() {
+      if (undoStack.length === 0) return;
+      currentCode = undoStack.pop();
+      document.getElementById('codeEditor').value = currentCode;
+      document.getElementById('btnUndo').disabled = undoStack.length === 0;
+      saveToStorage();
+      updateAllViews(true);
+      showToast('↺ 直前の状態に戻しました');
+    }
+
+    function saveToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY_CODE, currentCode);
+        localStorage.setItem(STORAGE_KEY_NAME, currentFileName);
+      } catch (e) {}
+    }
+
+    // =========================================================================
+    // In-Browser Project Save & Management (No File Export Required)
+    // =========================================================================
+    function loadSavedProjectsFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_PROJECTS);
+        savedProjects = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(savedProjects)) savedProjects = [];
+      } catch (e) {
+        savedProjects = [];
+      }
+      updateSavedProjectsCountUI();
+      renderBrowserProjectsList();
+    }
+
+    function persistSavedProjectsToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(savedProjects));
+      } catch (e) {
+        showToast('⚠️ ブラウザ保存容量の上限に達しました。不要な項目を削除してください');
+      }
+      updateSavedProjectsCountUI();
+      renderBrowserProjectsList();
+    }
+
+    function updateSavedProjectsCountUI() {
+      const count = savedProjects.length;
+      const hBadge = document.getElementById('savedCountBadgeHeader');
+      const mBadge = document.getElementById('savedListCountBadge');
+      if (hBadge) hBadge.textContent = count;
+      if (mBadge) mBadge.textContent = `${count}件`;
+    }
+
+    function generateDefaultProjectName() {
+      const mode = detectEffectiveMode(currentCode);
+      const prefix = mode === 'scad' ? 'SCADモデル' : 'Webアプリ';
+      const now = new Date();
+      const stamp = `${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      return `${prefix}_${stamp}`;
+    }
+
+    function saveProjectToBrowser(explicitName) {
+      if (!currentCode.trim()) {
+        showToast('保存するコードが空です');
+        return;
+      }
+
+      const inputEl = document.getElementById('saveFileName');
+      let name = (explicitName !== undefined ? explicitName : (inputEl ? inputEl.value : '')).trim();
+      if (!name || name === 'untitled') {
+        name = currentFileName !== 'untitled' ? currentFileName : generateDefaultProjectName();
+      }
+      if (inputEl) inputEl.value = name;
+
+      const mode = detectEffectiveMode(currentCode);
+      const lines = currentCode.split(/\r?\n/).length;
+      const nowIso = new Date().toISOString();
+
+      const existingIdx = savedProjects.findIndex(p => p.name === name);
+      if (existingIdx >= 0) {
+        savedProjects[existingIdx] = {
+          ...savedProjects[existingIdx],
+          code: currentCode,
+          mode,
+          lines,
+          updatedAt: nowIso
+        };
+        const updated = savedProjects.splice(existingIdx, 1)[0];
+        savedProjects.unshift(updated);
+        showToast(`📌 「${name}」をブラウザ内に上書き保存しました`);
+      } else {
+        savedProjects.unshift({
+          id: 'proj_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          name,
+          code: currentCode,
+          mode,
+          lines,
+          updatedAt: nowIso
+        });
+        showToast(`📌 「${name}」をブラウザ内に新規保存しました`);
+      }
+
+      updateFileBadgeUI(name);
+      saveToStorage();
+      persistSavedProjectsToStorage();
+    }
+
+    function loadProjectFromBrowser(id) {
+      const proj = savedProjects.find(p => p.id === id);
+      if (!proj) return;
+      pushUndo(currentCode);
+      currentCode = proj.code || '';
+      updateFileBadgeUI(proj.name);
+      document.getElementById('codeEditor').value = currentCode;
+      saveToStorage();
+      updateAllViews(true);
+      closeSaveModal();
+      showToast(`📂 「${proj.name}」を読み込みました`);
+    }
+
+    function overwriteProjectInBrowser(id) {
+      const idx = savedProjects.findIndex(p => p.id === id);
+      if (idx < 0) return;
+      if (!currentCode.trim()) {
+        showToast('現在のコードが空のため上書きできません');
+        return;
+      }
+      const name = savedProjects[idx].name;
+      savedProjects[idx].code = currentCode;
+      savedProjects[idx].mode = detectEffectiveMode(currentCode);
+      savedProjects[idx].lines = currentCode.split(/\r?\n/).length;
+      savedProjects[idx].updatedAt = new Date().toISOString();
+
+      const updated = savedProjects.splice(idx, 1)[0];
+      savedProjects.unshift(updated);
+
+      updateFileBadgeUI(name);
+      saveToStorage();
+      persistSavedProjectsToStorage();
+      showToast(`💾 「${name}」を現在のコードで上書きしました`);
+    }
+
+    function deleteProjectFromBrowser(id) {
+      const idx = savedProjects.findIndex(p => p.id === id);
+      if (idx < 0) return;
+      const removed = savedProjects.splice(idx, 1)[0];
+      persistSavedProjectsToStorage();
+      showToast(`🗑 「${removed.name}」を一覧から削除しました`);
+    }
+
+    function renderBrowserProjectsList() {
+      const host = document.getElementById('browserProjectsList');
+      if (!host) return;
+
+      if (savedProjects.length === 0) {
+        host.innerHTML = `
+          <div class="text-center py-8 px-4 space-y-1.5">
+            <div class="text-xl">📌</div>
+            <div class="text-xs font-bold text-slate-300">ブラウザ内に保存されたコードはまだありません</div>
+            <div class="text-[11px] text-slate-400">上の「📌 ブラウザに保存」を押すと、ファイル出力なしでここに何件でも保存・呼び出しできます。</div>
+          </div>
+        `;
+        return;
+      }
+
+      host.innerHTML = savedProjects.map(p => {
+        const isScad = p.mode === 'scad';
+        const modeTag = isScad
+          ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-700/60 font-semibold">🧊 SCAD</span>`
+          : `<span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-950/80 text-sky-300 border border-sky-700/60 font-semibold">🌐 Web</span>`;
+        const dateStr = formatDateShort(p.updatedAt);
+        const isCurrent = p.name === currentFileName;
+
+        return `
+          <div class="bg-slate-900 border ${isCurrent ? 'border-sky-500/70' : 'border-slate-800'} rounded-xl p-2.5 flex items-center justify-between gap-2 hover:border-slate-700 transition">
+            <div class="min-w-0 flex-1 cursor-pointer" onclick="loadProjectFromBrowser('${p.id}')">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                ${modeTag}
+                <span class="text-xs font-bold text-slate-100 truncate mono">${escapeHtml(p.name)}</span>
+                ${isCurrent ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300">編集中</span>' : ''}
+              </div>
+              <div class="text-[10px] text-slate-400 mt-1 flex items-center gap-2 mono">
+                <span>${p.lines || 0}行</span>
+                <span>•</span>
+                <span>${dateStr}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button onclick="loadProjectFromBrowser('${p.id}')" class="px-2.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-[11px] transition" title="このコードを読み込む">
+                📂 読込
+              </button>
+              <button onclick="overwriteProjectInBrowser('${p.id}')" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-[11px] transition" title="現在のエディタのコードでこの項目を上書き保存">
+                上書き
+              </button>
+              <button onclick="deleteProjectFromBrowser('${p.id}')" class="px-2 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/60 text-[11px] transition" title="削除">
+                🗑
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function formatDateShort(iso) {
+      if (!iso) return '';
+      try {
+        const d = new Date(iso);
+        return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      } catch (e) {
+        return '';
+      }
+    }
+
+    // =========================================================================
+    // Mode Detection & Settings Controls
+    // =========================================================================
+    function detectEffectiveMode(code) {
+      if (runtimeMode === 'web') return 'web';
+      if (runtimeMode === 'scad') return 'scad';
+      if (currentFileName.toLowerCase().endsWith('.scad')) return 'scad';
+      const trimmed = (code || '').trim();
+      if (!trimmed) return 'empty';
+      if (/<!DOCTYPE|<html|<script|<canvas|<body|<div/i.test(trimmed)) return 'web';
+      if (/\b(module|difference|union|intersection|linear_extrude|rotate_extrude|cylinder|cube|sphere|polygon|hull|offset|\$fn)\b/.test(trimmed)) {
+        return 'scad';
+      }
+      return 'web';
+    }
+
+    function setRuntimeMode(mode) {
+      runtimeMode = mode;
+      ['auto', 'web', 'scad'].forEach(m => {
+        const btn = document.getElementById('modeBtn-' + m);
+        if (!btn) return;
+        if (m === mode) {
+          btn.className = 'py-2 rounded-lg text-xs font-semibold bg-sky-600 text-white transition';
+        } else {
+          btn.className = 'py-2 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 transition';
+        }
+      });
+      updateAllViews(true);
+    }
+
+    function openSettingsModal() {
+      document.getElementById('settingsModal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.add('hidden');
+    }
+
+    function syncFuzzySetting(checked) {
+      const f1 = document.getElementById('fuzzyToggle');
+      const f2 = document.getElementById('settingsFuzzyToggle');
+      if (f1) f1.checked = checked;
+      if (f2) f2.checked = checked;
+      checkPatchMatch();
+    }
+
+    function reloadActivePreview() {
+      const effectiveMode = detectEffectiveMode(currentCode);
+      if (effectiveMode === 'scad') {
+        syncToOchafikIframe(true);
+        showToast('🔄 OpenSCAD 3Dプレビューを更新しました');
+      } else {
+        runPreview(true);
+        showToast('🔄 プレビューを再実行しました');
+      }
+    }
+
+    // =========================================================================
+    // OpenSCAD Customizer & Web Parameter Parser
+    // =========================================================================
+    function extractParameters(code, effectiveMode) {
+      if (!code || !code.trim()) return [];
+      if (effectiveMode === 'scad') {
+        return extractOpenSCADCustomizerParams(code);
+      } else {
+        return extractWebVariables(code);
+      }
+    }
+
+    function extractOpenSCADCustomizerParams(code) {
+      const lines = code.split(/\r?\n/);
+      const params = [];
+      let currentSection = '基本パラメータ (Global)';
+      let pendingCommentAbove = '';
+
+      for (let i = 0; i < lines.length; i++) {
+        const rawLine = lines[i];
+        const trimmed = rawLine.trim();
+
+        if (/^\/\*\s*\[\s*Hidden\s*\]\s*\*\//i.test(trimmed)) {
+          break;
+        }
+
+        if (/^(module|function)\s+[a-zA-Z0-9_]+\s*\(/.test(trimmed)) {
+          break;
+        }
+
+        const secMatch = trimmed.match(/^\/\*\s*\[\s*([^\]]+?)\s*\]\s*\*\//);
+        if (secMatch) {
+          currentSection = secMatch[1].trim();
+          pendingCommentAbove = '';
+          continue;
+        }
+
+        if (/^\/\/(?!\s*===)(?!\s*---)(.+)$/.test(trimmed)) {
+          const cText = trimmed.replace(/^\/\/\s*/, '').trim();
+          if (cText) pendingCommentAbove = cText;
+          continue;
+        }
+
+        if (!trimmed || trimmed.startsWith('/*') || trimmed.startsWith('*')) {
+          pendingCommentAbove = '';
+          continue;
+        }
+
+        const commentIdx = findUnquotedCommentIndex(rawLine);
+        const codePart = commentIdx >= 0 ? rawLine.slice(0, commentIdx) : rawLine;
+        const inlineComment = commentIdx >= 0 ? rawLine.slice(commentIdx + 2).trim() : '';
+
+        const assignRegex = /(?:^|;)\s*(\$?[a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*([^;]+?)\s*(?=;|$)/g;
+        let match;
+        let foundOnLine = 0;
+
+        while ((match = assignRegex.exec(codePart)) !== null) {
+          const varName = match[1];
+          const valExpr = match[2].trim();
+
+          const parsedVal = parseScadLiteral(valExpr);
+          if (!parsedVal) continue;
+
+          foundOnLine++;
+          const combinedComment = inlineComment || pendingCommentAbove || '';
+          const spec = parseScadCommentSpec(parsedVal, combinedComment, varName);
+
+          params.push({
+            id: `scad_${i}_${varName}`,
+            lineIndex: i,
+            name: varName,
+            section: currentSection,
+            valType: parsedVal.type,
+            value: parsedVal.value,
+            rawValueText: valExpr,
+            widget: spec.widget,
+            options: spec.options,
+            min: spec.min,
+            max: spec.max,
+            step: spec.step,
+            description: spec.description
+          });
+        }
+
+        if (foundOnLine > 0) {
+          pendingCommentAbove = '';
+        }
+      }
+
+      return params;
+    }
+
+    function findUnquotedCommentIndex(line) {
+      let inStr = false;
+      for (let i = 0; i < line.length - 1; i++) {
+        if (line[i] === '"' && line[i - 1] !== '\\') inStr = !inStr;
+        if (!inStr && line[i] === '/' && line[i + 1] === '/') return i;
+      }
+      return -1;
+    }
+
+    function parseScadLiteral(expr) {
+      if (expr === 'true' || expr === 'false') {
+        return { type: 'boolean', value: expr === 'true' };
+      }
+      if (/^"([^"\\]|\\.)*"$/.test(expr)) {
+        return { type: 'string', value: expr.slice(1, -1) };
+      }
+      if (/^[+-]?\d+(\.\d+)?$/.test(expr)) {
+        return { type: 'number', value: parseFloat(expr), rawStr: expr };
+      }
+      if (/^\[\s*[+-]?\d+(\.\d+)?(\s*,\s*[+-]?\d+(\.\d+)?){1,3}\s*\]$/.test(expr)) {
+        try {
+          const arr = JSON.parse(expr);
+          if (Array.isArray(arr) && arr.every(n => typeof n === 'number')) {
+            return { type: 'vector', value: arr };
+          }
+        } catch (e) {}
+      }
+      return null;
+    }
+
+    function parseScadCommentSpec(parsedVal, comment, varName) {
+      let description = comment;
+      const bracketMatches = [...comment.matchAll(/\[([^\]]+)\]/g)];
+
+      if (parsedVal.type === 'boolean') {
+        let cleanDesc = comment;
+        if (bracketMatches.length > 0) {
+          const bText = bracketMatches[0][1];
+          if (/true\s*:/i.test(bText)) {
+            cleanDesc = bText;
+          } else if (/^true\s*,\s*false$/i.test(bText.trim())) {
+            cleanDesc = comment.replace(bracketMatches[0][0], '').trim();
+          }
+        }
+        return {
+          widget: 'checkbox',
+          description: cleanDesc,
+          options: null
+        };
+      }
+
+      if (parsedVal.type === 'string') {
+        if (bracketMatches.length > 0) {
+          const bText = bracketMatches[0][1].trim();
+          const opts = parseDropdownItems(bText, 'string');
+          if (opts.length > 0) {
+            const desc = comment.replace(bracketMatches[0][0], '').trim();
+            return {
+              widget: 'select',
+              options: opts,
+              description: desc
+            };
+          }
+        }
+        return {
+          widget: 'text',
+          description: comment
+        };
+      }
+
+      if (parsedVal.type === 'number') {
+        const num = parsedVal.value;
+        const decPart = (parsedVal.rawStr || String(num)).split('.')[1] || '';
+        let defaultStep = decPart.length >= 2 ? 0.01 : (decPart.length === 1 ? 0.1 : (Math.abs(num) <= 1 ? 0.05 : 1));
+        if (varName.includes('clearance')) defaultStep = 0.01;
+        if (varName.includes('rot')) defaultStep = 15;
+
+        let min = num < 0 ? Math.floor(num * 2) : 0;
+        let max = num === 0 ? 100 : (num > 0 ? Math.max(num * 2.5, num + 10) : 100);
+        if (varName.includes('clearance')) { min = 0; max = 0.5; }
+        if (varName.includes('rot')) { min = -180; max = 360; }
+
+        for (const bm of bracketMatches) {
+          const bText = bm[1].trim();
+          const range3 = bText.match(/^([+-]?\d+(?:\.\d+)?)\s*:\s*([+-]?\d+(?:\.\d+)?)\s*:\s*([+-]?\d+(?:\.\d+)?)$/);
+          if (range3) {
+            min = parseFloat(range3[1]);
+            defaultStep = parseFloat(range3[2]);
+            max = parseFloat(range3[3]);
+            description = comment.replace(bm[0], '').trim();
+            break;
+          }
+          const range2 = bText.match(/^([+-]?\d+(?:\.\d+)?)\s*:\s*([+-]?\d+(?:\.\d+)?)$/);
+          if (range2) {
+            min = parseFloat(range2[1]);
+            max = parseFloat(range2[2]);
+            description = comment.replace(bm[0], '').trim();
+            break;
+          }
+          const jpRange = bText.match(/([+-]?\d+(?:\.\d+)?)\s*[〜~-]\s*([+-]?\d+(?:\.\d+)?)/);
+          if (jpRange && !bText.includes('->')) {
+            min = parseFloat(jpRange[1]);
+            max = parseFloat(jpRange[2]);
+            break;
+          }
+          if (bText.includes(',') && !bText.includes('->')) {
+            const opts = parseDropdownItems(bText, 'number');
+            if (opts.length > 1) {
+              return {
+                widget: 'select',
+                options: opts,
+                description: comment.replace(bm[0], '').trim()
+              };
+            }
+          }
+        }
+
+        min = Math.min(min, num);
+        max = Math.max(max, num);
+
+        return {
+          widget: 'slider',
+          min: Number(min.toFixed(3)),
+          max: Number(max.toFixed(3)),
+          step: defaultStep,
+          description
+        };
+      }
+
+      if (parsedVal.type === 'vector') {
+        return {
+          widget: 'vector',
+          description
+        };
+      }
+
+      return { widget: 'text', description };
+    }
+
+    function parseDropdownItems(bText, type) {
+      const items = [];
+      const parts = [];
+      let cur = '';
+      let inQ = false;
+      for (let i = 0; i < bText.length; i++) {
+        const ch = bText[i];
+        if (ch === '"' && bText[i - 1] !== '\\') inQ = !inQ;
+        if (!inQ && ch === ',') {
+          parts.push(cur.trim());
+          cur = '';
+        } else {
+          cur += ch;
+        }
+      }
+      if (cur.trim()) parts.push(cur.trim());
+
+      for (const p of parts) {
+        if (!p) continue;
+        if (p.startsWith('"') && p.endsWith('"')) {
+          const val = p.slice(1, -1);
+          items.push({ value: val, label: val });
+          continue;
+        }
+        const colonIdx = p.indexOf(':');
+        if (colonIdx > 0) {
+          const rawV = p.slice(0, colonIdx).trim().replace(/^"|"$/g, '');
+          const rawL = p.slice(colonIdx + 1).trim().replace(/^"|"$/g, '');
+          const val = type === 'number' ? parseFloat(rawV) : rawV;
+          if (type === 'number' && isNaN(val)) continue;
+          items.push({ value: val, label: `${rawL} (${rawV})` });
+        } else {
+          const clean = p.replace(/^"|"$/g, '');
+          const val = type === 'number' ? parseFloat(clean) : clean;
+          if (type === 'number' && isNaN(val)) continue;
+          items.push({ value: val, label: clean });
+        }
+      }
+      return items;
+    }
+
+    function extractWebVariables(code) {
+      const lines = code.split(/\r?\n/);
+      const params = [];
+      const regex = /\b(const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*([+-]?\d+(?:\.\d+)?|true|false|['"]#[0-9a-fA-F]{3,6}['"])\s*;?(?:\s*\/\/\s*(.*))?/;
+
+      for (let i = 0; i < lines.length; i++) {
+        const m = lines[i].match(regex);
+        if (!m) continue;
+        const name = m[2];
+        const rawVal = m[3];
+        const comment = (m[4] || '').trim();
+
+        if (rawVal === 'true' || rawVal === 'false') {
+          params.push({
+            id: `web_${i}_${name}`,
+            lineIndex: i,
+            name,
+            section: 'JavaScript 変数',
+            valType: 'boolean',
+            value: rawVal === 'true',
+            widget: 'checkbox',
+            description: comment
+          });
+        } else if (rawVal.startsWith("'") || rawVal.startsWith('"')) {
+          params.push({
+            id: `web_${i}_${name}`,
+            lineIndex: i,
+            name,
+            section: 'カラー設定',
+            valType: 'color',
+            value: rawVal.slice(1, -1),
+            widget: 'color',
+            description: comment
+          });
+        } else {
+          const num = parseFloat(rawVal);
+          const step = rawVal.includes('.') ? 0.1 : 1;
+          params.push({
+            id: `web_${i}_${name}`,
+            lineIndex: i,
+            name,
+            section: 'JavaScript 数値パラメータ',
+            valType: 'number',
+            value: num,
+            widget: 'slider',
+            min: num < 0 ? num * 2 : 0,
+            max: num === 0 ? 100 : Math.max(num * 3, num + 20),
+            step,
+            description: comment
+          });
+        }
+      }
+      return params;
+    }
+
+    // =========================================================================
+    // Render Customizer UI
+    // =========================================================================
+    function renderCustomizerUI() {
+      const effectiveMode = detectEffectiveMode(currentCode);
+      parsedParameters = extractParameters(currentCode, effectiveMode);
+
+      const count = parsedParameters.length;
+      document.getElementById('paramCountBadgeDesktop').textContent = count;
+      document.getElementById('paramCountBadgeMobile').textContent = count;
+      document.getElementById('drawerParamCount').textContent = count;
+      document.getElementById('headerParamBadge').textContent = count;
+      document.getElementById('tweakModeTag').textContent = effectiveMode === 'scad' ? 'OpenSCAD Customizer' : 'Web Tweaker';
+
+      const filterText = (document.getElementById('paramFilter')?.value || '').trim().toLowerCase();
+
+      const mainHost = document.getElementById('customizerContainer');
+      const drawerHost = document.getElementById('drawerCustomizerHost');
+
+      const html = buildCustomizerHTML(parsedParameters, filterText);
+      mainHost.innerHTML = html;
+      drawerHost.innerHTML = html;
+    }
+
+    function buildCustomizerHTML(params, filterText) {
+      if (params.length === 0) {
+        return `
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center space-y-2">
+            <div class="text-xl">🎛</div>
+            <div class="text-xs font-bold text-slate-300">調整可能なパラメータがありません</div>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              OpenSCADの <code class="text-sky-300">/* [セクション名] */</code> や <code class="text-sky-300">mode = "A"; // ["A", "B"]</code>、またはJSの <code class="text-sky-300">const SPEED = 10;</code> が検出されると、ここにドロップダウンやスライダーが自動生成されます。
+            </p>
+          </div>
+        `;
+      }
+
+      const groups = new Map();
+      for (const p of params) {
+        if (filterText) {
+          const hay = `${p.name} ${p.description || ''} ${p.section || ''}`.toLowerCase();
+          if (!hay.includes(filterText)) continue;
+        }
+        if (!groups.has(p.section)) groups.set(p.section, []);
+        groups.get(p.section).push(p);
+      }
+
+      if (groups.size === 0) {
+        return `<div class="text-xs text-slate-400 text-center py-6">「${escapeHtml(filterText)}」に一致する項目はありません</div>`;
+      }
+
+      let out = '';
+      for (const [secName, items] of groups.entries()) {
+        const isCollapsed = !!collapsedSections[secName] && !filterText;
+        const safeSec = escapeHtml(secName);
+
+        out += `
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden">
+            <button onclick="toggleSection('${escapeJsStr(secName)}')" class="w-full px-3 py-2 bg-slate-800/70 hover:bg-slate-800 flex items-center justify-between text-left transition">
+              <span class="text-xs font-bold text-sky-300 truncate pr-2">${safeSec}</span>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="text-[10px] bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded">${items.length}</span>
+                <span class="text-xs text-slate-400">${isCollapsed ? '▸' : '▾'}</span>
+              </div>
+            </button>
+            <div class="${isCollapsed ? 'hidden' : 'p-2.5 space-y-2.5'}">
+              ${items.map(item => buildWidgetHTML(item)).join('')}
+            </div>
+          </div>
+        `;
+      }
+      return out;
+    }
+
+    function buildWidgetHTML(p) {
+      const descHtml = p.description
+        ? `<div class="text-[11px] text-slate-400 leading-snug mt-0.5">${escapeHtml(p.description)}</div>`
+        : '';
+
+      if (p.widget === 'select' && Array.isArray(p.options)) {
+        const optsHtml = p.options.map(o => {
+          const selected = String(o.value) === String(p.value) ? 'selected' : '';
+          return `<option value="${escapeHtml(String(o.value))}" ${selected}>${escapeHtml(o.label)}</option>`;
+        }).join('');
+
+        return `
+          <div class="bg-slate-950/80 border border-slate-800/90 rounded-lg p-2.5">
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="text-xs font-bold mono text-amber-300">${escapeHtml(p.name)}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800/50">選択メニュー</span>
+            </div>
+            ${descHtml}
+            <select onchange="updateParameterValue('${p.id}', this.value)" class="mt-1.5 w-full bg-slate-900 border border-slate-700 focus:border-sky-400 rounded-lg px-2.5 py-2 text-xs text-slate-100 outline-none">
+              ${optsHtml}
+            </select>
+          </div>
+        `;
+      }
+
+      if (p.widget === 'checkbox') {
+        const checked = p.value ? 'checked' : '';
+        return `
+          <div class="bg-slate-950/80 border border-slate-800/90 rounded-lg p-2.5 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <div class="text-xs font-bold mono text-emerald-300">${escapeHtml(p.name)}</div>
+              ${descHtml}
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer shrink-0">
+              <input type="checkbox" ${checked} onchange="updateParameterValue('${p.id}', this.checked)" class="sr-only peer" />
+              <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-sky-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+            </label>
+          </div>
+        `;
+      }
+
+      if (p.widget === 'slider') {
+        return `
+          <div class="bg-slate-950/80 border border-slate-800/90 rounded-lg p-2.5">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-bold mono text-sky-300 truncate">${escapeHtml(p.name)}</span>
+              <div class="flex items-center gap-1 shrink-0">
+                <button onclick="stepParameterValue('${p.id}', -1)" class="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 flex items-center justify-center">−</button>
+                <input type="number" step="${p.step}" value="${p.value}" onchange="updateParameterValue('${p.id}', this.value)" class="w-20 bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-right text-xs mono text-slate-100 outline-none focus:border-sky-400" />
+                <button onclick="stepParameterValue('${p.id}', 1)" class="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 flex items-center justify-center">＋</button>
+              </div>
+            </div>
+            ${descHtml}
+            <div class="flex items-center gap-2 mt-2">
+              <span class="text-[10px] mono text-slate-500">${p.min}</span>
+              <input type="range" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.value}" oninput="updateParameterValue('${p.id}', this.value, true)" class="flex-1" />
+              <span class="text-[10px] mono text-slate-500">${p.max}</span>
+            </div>
+          </div>
+        `;
+      }
+
+      if (p.widget === 'vector' && Array.isArray(p.value)) {
+        const inputs = p.value.map((v, idx) => `
+          <input type="number" step="0.5" value="${v}" onchange="updateVectorElement('${p.id}', ${idx}, this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs mono text-center text-slate-100" />
+        `).join('');
+        return `
+          <div class="bg-slate-950/80 border border-slate-800/90 rounded-lg p-2.5">
+            <div class="text-xs font-bold mono text-indigo-300 mb-1">${escapeHtml(p.name)}</div>
+            ${descHtml}
+            <div class="grid grid-cols-${p.value.length} gap-1.5 mt-1.5">${inputs}</div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="bg-slate-950/80 border border-slate-800/90 rounded-lg p-2.5">
+          <div class="text-xs font-bold mono text-slate-200 mb-1">${escapeHtml(p.name)}</div>
+          ${descHtml}
+          <input type="${p.widget === 'color' ? 'color' : 'text'}" value="${escapeHtml(String(p.value))}" onchange="updateParameterValue('${p.id}', this.value)" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-100" />
+        </div>
+      `;
+    }
+
+    function toggleSection(secName) {
+      collapsedSections[secName] = !collapsedSections[secName];
+      renderCustomizerUI();
+    }
+
+    function toggleAllSections(expand) {
+      if (expand) {
+        collapsedSections = {};
+      } else {
+        for (const p of parsedParameters) {
+          collapsedSections[p.section] = true;
+        }
+      }
+      renderCustomizerUI();
+    }
+
+    function stepParameterValue(paramId, dir) {
+      const p = parsedParameters.find(item => item.id === paramId);
+      if (!p) return;
+      const step = p.step || 1;
+      const decimals = (String(step).split('.')[1] || '').length;
+      const nextVal = Number((Number(p.value) + dir * step).toFixed(Math.max(decimals, 3)));
+      updateParameterValue(paramId, nextVal);
+    }
+
+    function updateVectorElement(paramId, idx, newElemVal) {
+      const p = parsedParameters.find(item => item.id === paramId);
+      if (!p || !Array.isArray(p.value)) return;
+      const nextArr = [...p.value];
+      nextArr[idx] = parseFloat(newElemVal) || 0;
+      updateParameterValue(paramId, nextArr);
+    }
+
+    function updateParameterValue(paramId, rawNewValue, isSliderDrag = false) {
+      const p = parsedParameters.find(item => item.id === paramId);
+      if (!p) return;
+
+      let formattedLiteral = '';
+      if (p.valType === 'boolean') {
+        const boolVal = rawNewValue === true || rawNewValue === 'true';
+        p.value = boolVal;
+        formattedLiteral = boolVal ? 'true' : 'false';
+      } else if (p.valType === 'string') {
+        p.value = String(rawNewValue);
+        formattedLiteral = `"${String(rawNewValue).replace(/"/g, '\\"')}"`;
+      } else if (p.valType === 'number') {
+        const numVal = parseFloat(rawNewValue);
+        if (isNaN(numVal)) return;
+        p.value = numVal;
+        formattedLiteral = String(numVal);
+      } else if (p.valType === 'vector') {
+        p.value = rawNewValue;
+        formattedLiteral = `[${rawNewValue.join(', ')}]`;
+      } else if (p.valType === 'color') {
+        p.value = String(rawNewValue);
+        formattedLiteral = `'${rawNewValue}'`;
+      }
+
+      const lines = currentCode.split(/\r?\n/);
+      const targetLine = lines[p.lineIndex];
+      if (targetLine === undefined) return;
+
+      const commentIdx = findUnquotedCommentIndex(targetLine);
+      const codePart = commentIdx >= 0 ? targetLine.slice(0, commentIdx) : targetLine;
+      const commentPart = commentIdx >= 0 ? targetLine.slice(commentIdx) : '';
+
+      const escapedName = p.name.replace(/\$/g, '\\$');
+      const replaceRegex = new RegExp(`((?:^|;|const|let|var)\\s*${escapedName}\\s*=\\s*)([^;]+?)(\\s*(?=;|$))`);
+      const updatedCodePart = codePart.replace(replaceRegex, `$1${formattedLiteral}$3`);
+
+      lines[p.lineIndex] = updatedCodePart + commentPart;
+      currentCode = lines.join('\n');
+      document.getElementById('codeEditor').value = currentCode;
+      saveToStorage();
+
+      if (!isSliderDrag) {
+        renderCustomizerUI();
+      }
+
+      const effectiveMode = detectEffectiveMode(currentCode);
+      if (effectiveMode === 'web') {
+        runPreview(false);
+      } else if (effectiveMode === 'scad') {
+        if (document.getElementById('autoSyncOchafik')?.checked) {
+          clearTimeout(ochafikSyncTimer);
+          ochafikSyncTimer = setTimeout(() => {
+            syncToOchafikIframe(false);
+          }, isSliderDrag ? 450 : 120);
+        }
+      }
+    }
+
+    // =========================================================================
+    // Ochafik OpenSCAD Playground Normalizer & Gzip URL Hash Builder
+    // =========================================================================
+    function normalizeScadForOchafik(code) {
+      const lines = code.split(/\r?\n/);
+      const outLines = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*') || /^(module|function)\b/.test(trimmed)) {
+          outLines.push(line);
+          continue;
+        }
+
+        const commentIdx = findUnquotedCommentIndex(line);
+        if (commentIdx < 0) {
+          outLines.push(line);
+          continue;
+        }
+
+        const codePart = line.slice(0, commentIdx).trimEnd();
+        const commentText = line.slice(commentIdx + 2).trim();
+
+        const singleAssign = codePart.match(/^(\s*)(\$?[a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*([^;]+);\s*$/);
+        if (!singleAssign) {
+          outLines.push(line);
+          continue;
+        }
+
+        const indent = singleAssign[1];
+        const varName = singleAssign[2];
+        const valExpr = singleAssign[3].trim();
+        const parsed = parseScadLiteral(valExpr);
+        if (!parsed) {
+          outLines.push(line);
+          continue;
+        }
+
+        if (/^\[[^\]]+\]$/.test(commentText)) {
+          if (parsed.type === 'boolean') {
+            outLines.push(`${indent}// ${commentText}`);
+            outLines.push(`${indent}${varName} = ${valExpr};`);
+          } else {
+            outLines.push(`${indent}${varName} = ${valExpr}; // ${commentText}`);
+          }
+          continue;
+        }
+
+        const spec = parseScadCommentSpec(parsed, commentText, varName);
+        if (spec.description) {
+          outLines.push(`${indent}// ${spec.description}`);
+        }
+        if (parsed.type === 'number' && spec.widget === 'slider' && spec.min !== undefined && spec.max !== undefined) {
+          outLines.push(`${indent}${varName} = ${valExpr}; // [${spec.min}:${spec.step}:${spec.max}]`);
+        } else if (spec.widget === 'select' && commentText.includes('[')) {
+          const bm = commentText.match(/\[[^\]]+\]/);
+          outLines.push(`${indent}${varName} = ${valExpr}; // ${bm ? bm[0] : ''}`);
+        } else {
+          outLines.push(`${indent}${varName} = ${valExpr};`);
+        }
+      }
+
+      return outLines.join('\n');
+    }
+
+    async function compressStringToGzipBase64(str) {
+      if (typeof CompressionStream === 'undefined') {
+        return null;
+      }
+      const bytes = new TextEncoder().encode(str);
+      const cs = new CompressionStream('gzip');
+      const writer = cs.writable.getWriter();
+      writer.write(bytes);
+      writer.close();
+      const buf = await new Response(cs.readable).arrayBuffer();
+      const uint8 = new Uint8Array(buf);
+      let binary = '';
+      const chunkSize = 0x8000;
+      for (let i = 0; i < uint8.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, uint8.subarray(i, i + chunkSize));
+      }
+      return btoa(binary);
+    }
+
+    async function buildOchafikUrl(code) {
+      const normalized = normalizeScadForOchafik(code);
+      const stateObj = {
+        params: {
+          activePath: '/playground.scad',
+          sources: [
+            { path: '/playground.scad', content: normalized }
+          ],
+          features: ['manifold', 'fast-csg', 'lazy-union']
+        },
+        view: {
+          layout: {
+            mode: 'multi',
+            editor: false,
+            viewer: true,
+            customizer: true
+          },
+          color: '#38bdf8',
+          showAxes: true,
+          showShadows: true
+        }
+      };
+
+      try {
+        const compressed = await compressStringToGzipBase64(JSON.stringify(stateObj));
+        if (compressed) {
+          return `https://ochafik.com/openscad2/#${compressed}`;
+        }
+      } catch (e) {
+        console.warn('Gzip state compression failed:', e);
+      }
+      return 'https://ochafik.com/openscad2/';
+    }
+
+    let lastOchafikHash = '';
+    async function syncToOchafikIframe(forceReload = false) {
+      if (!currentCode.trim()) return;
+      const iframe = document.getElementById('ochafikFrame');
+      const url = await buildOchafikUrl(currentCode);
+      if (!forceReload && url === lastOchafikHash) return;
+      lastOchafikHash = url;
+
+      if (forceReload) {
+        iframe.src = 'about:blank';
+        setTimeout(() => { iframe.src = url; }, 40);
+      } else {
+        iframe.src = url;
+      }
+      addLog('info', 'Ochafikエンジンへコードとカスタマイザー定義を同期しました');
+    }
+
+    async function openOchafikExternal() {
+      if (!currentCode.trim()) {
+        showToast('コードが空です');
+        return;
+      }
+      const normalized = normalizeScadForOchafik(currentCode);
+      try {
+        await navigator.clipboard.writeText(normalized);
+      } catch (e) {}
+      const url = await buildOchafikUrl(currentCode);
+      window.open(url, '_blank', 'noopener');
+      showToast('🚀 カスタマイザー互換形式でOchafikを開きました');
+    }
+
+    async function copyNormalizedScad() {
+      if (!currentCode.trim()) {
+        showToast('コピーするコードがありません');
+        return;
+      }
+      const normalized = normalizeScadForOchafik(currentCode);
+      try {
+        await navigator.clipboard.writeText(normalized);
+        showToast('✓ Ochafikカスタマイザー互換コードをコピーしました');
+      } catch (e) {
+        showToast('コピーに失敗しました');
+      }
+    }
+
+    function togglePreviewCustomizerDrawer() {
+      const drawer = document.getElementById('previewCustomizerDrawer');
+      const isHidden = drawer.classList.contains('hidden');
+      drawer.classList.toggle('hidden', !isHidden);
+      drawer.classList.toggle('flex', isHidden);
+
+      if (isHidden && window.innerWidth < 768) {
+        switchMobileView('play');
+      }
+    }
+
+    // =========================================================================
+    // Multi-line Fuzzy Patch Engine
+    // =========================================================================
+    function buildFuzzyRegex(searchStr) {
+      const trimmed = searchStr.trim();
+      if (!trimmed) return null;
+      const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pattern = escaped.replace(/\s+/g, '\\s+');
+      return new RegExp(pattern, 'g');
+    }
+
+    function checkPatchMatch() {
+      const searchStr = document.getElementById('patchSearch').value;
+      const badge = document.getElementById('matchBadge');
+      const fuzzy = document.getElementById('fuzzyToggle').checked;
+
+      if (!searchStr.trim()) {
+        badge.textContent = '検索待ち';
+        badge.className = 'text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-normal';
+        return 0;
+      }
+
+      let count = 0;
+      if (fuzzy) {
+        const rx = buildFuzzyRegex(searchStr);
+        if (rx) {
+          const matches = currentCode.match(rx);
+          count = matches ? matches.length : 0;
+        }
+      } else {
+        let idx = 0;
+        while ((idx = currentCode.indexOf(searchStr, idx)) !== -1) {
+          count++;
+          idx += searchStr.length;
+        }
+      }
+
+      if (count > 0) {
+        badge.textContent = `✓ ${count}箇所に一致`;
+        badge.className = 'text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold';
+      } else {
+        badge.textContent = '✕ 一致なし';
+        badge.className = 'text-[11px] px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-700 font-bold';
+      }
+      return count;
+    }
+
+    function applyPatch(replaceAll = false) {
+      const searchStr = document.getElementById('patchSearch').value;
+      const replaceStr = document.getElementById('patchReplace').value;
+      const fuzzy = document.getElementById('fuzzyToggle').checked;
+
+      if (!searchStr.trim()) {
+        showToast('置換前のコードを入力してください');
+        return;
+      }
+
+      const matchCount = checkPatchMatch();
+      if (matchCount === 0) {
+        showToast('一致するコード範囲が見つかりません');
+        return;
+      }
+
+      pushUndo(currentCode);
+
+      if (fuzzy) {
+        const rx = buildFuzzyRegex(searchStr);
+        if (replaceAll) {
+          currentCode = currentCode.replace(rx, () => replaceStr);
+        } else {
+          const singleRx = new RegExp(rx.source);
+          currentCode = currentCode.replace(singleRx, () => replaceStr);
+        }
+      } else {
+        if (replaceAll) {
+          currentCode = currentCode.split(searchStr).join(replaceStr);
+        } else {
+          const idx = currentCode.indexOf(searchStr);
+          if (idx !== -1) {
+            currentCode = currentCode.slice(0, idx) + replaceStr + currentCode.slice(idx + searchStr.length);
+          }
+        }
+      }
+
+      document.getElementById('codeEditor').value = currentCode;
+      saveToStorage();
+      updateAllViews(true);
+      showToast('⚡ パッチ置換を適用しました');
+
+      if (window.innerWidth < 768) {
+        switchMobileView('play');
+      }
+    }
+
+    // =========================================================================
+    // Preview Runner (Web & Ochafik OpenSCAD Exclusively)
+    // =========================================================================
+    function updateAllViews(reloadPreview = false) {
+      const effectiveMode = detectEffectiveMode(currentCode);
+      const modeBadge = document.getElementById('modeBadge');
+      modeBadge.textContent = effectiveMode === 'scad' ? '🧊 SCAD' : (effectiveMode === 'web' ? '🌐 Web' : '待機中');
+
+      // Show Customizer Drawer button in header when OpenSCAD mode is active (or parameters exist)
+      const btnHeaderCustomizer = document.getElementById('btnHeaderCustomizer');
+      if (btnHeaderCustomizer) {
+        if (effectiveMode === 'scad') {
+          btnHeaderCustomizer.classList.remove('hidden');
+          btnHeaderCustomizer.classList.add('flex');
+        } else {
+          btnHeaderCustomizer.classList.add('hidden');
+          btnHeaderCustomizer.classList.remove('flex');
+        }
+      }
+
+      const linesCount = currentCode ? currentCode.split(/\r?\n/).length : 0;
+      document.getElementById('codeStats').textContent = `${linesCount}行`;
+
+      renderCustomizerUI();
+      checkPatchMatch();
+      renderBrowserProjectsList();
+
+      if (reloadPreview) {
+        runPreview(true);
+      }
+    }
+
+    function runPreview(forceReload = false) {
+      const effectiveMode = detectEffectiveMode(currentCode);
+      const emptyView = document.getElementById('emptyStateView');
+      const webFrame = document.getElementById('webPreviewFrame');
+      const scadView = document.getElementById('scadViewContainer');
+
+      if (!currentCode.trim()) {
+        emptyView.classList.remove('hidden');
+        webFrame.classList.add('hidden');
+        scadView.classList.add('hidden');
+        scadView.classList.remove('flex');
+        webFrame.srcdoc = '';
+        return;
+      }
+
+      emptyView.classList.add('hidden');
+
+      if (effectiveMode === 'scad') {
+        webFrame.classList.add('hidden');
+        scadView.classList.remove('hidden');
+        scadView.classList.add('flex');
+        syncToOchafikIframe(forceReload);
+      } else {
+        scadView.classList.add('hidden');
+        scadView.classList.remove('flex');
+        webFrame.classList.remove('hidden');
+
+        const consoleBridge = `
+          <script>
+            (function(){
+              const send = (type, args) => {
+                try {
+                  parent.postMessage({ source: 'playpatch-preview', type, text: Array.from(args).map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') }, '*');
+                } catch(e){}
+              };
+              const origLog = console.log;
+              const origErr = console.error;
+              console.log = function(){ send('log', arguments); origLog.apply(console, arguments); };
+              console.error = function(){ send('error', arguments); origErr.apply(console, arguments); };
+              window.addEventListener('error', function(e){ send('error', [e.message + ' (Line ' + e.lineno + ')']); });
+            })();
+          <\/script>
+        `;
+        webFrame.srcdoc = consoleBridge + currentCode;
+      }
+    }
+
+    // =========================================================================
+    // Copy, Paste, Clear All & Editor Utilities
+    // =========================================================================
+    async function copyAllCode() {
+      if (!currentCode) {
+        showToast('コピーするコードがありません');
+        return;
+      }
+      const btn = document.getElementById('btnCopyAll');
+      try {
+        await navigator.clipboard.writeText(currentCode);
+      } catch (e) {
+        const ta = document.getElementById('codeEditor');
+        ta.select();
+        document.execCommand('copy');
+      }
+      btn.innerHTML = '<span>✓</span><span>コピー完了</span>';
+      showToast('📋 全コードをクリップボードにコピーしました');
+      setTimeout(() => {
+        btn.innerHTML = '<span>📋</span><span>全コピー</span>';
+      }, 1800);
+    }
+
+    async function handlePasteButton() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (!text) {
+          showToast('クリップボードが空です');
+          return;
+        }
+        if (!currentCode.trim()) {
+          pushUndo(currentCode);
+          currentCode = text;
+          document.getElementById('codeEditor').value = currentCode;
+          saveToStorage();
+          updateAllViews(true);
+          showToast('📥 コードを貼り付けました');
+        } else {
+          pendingClipboardText = text;
+          const bar = document.getElementById('pasteConfirmBar');
+          bar.classList.remove('hidden');
+          bar.classList.add('flex');
+          switchLeftTab('code');
+        }
+      } catch (e) {
+        showToast('貼り付け権限がありません。テキストエリアを長押ししてペーストしてください');
+        switchLeftTab('code');
+        document.getElementById('codeEditor').focus();
+      }
+    }
+
+    function confirmPasteAction(mode) {
+      if (!pendingClipboardText) return;
+      pushUndo(currentCode);
+      if (mode === 'replace') {
+        currentCode = pendingClipboardText;
+      } else {
+        currentCode = currentCode + '\n' + pendingClipboardText;
+      }
+      pendingClipboardText = '';
+      hidePasteConfirm();
+      document.getElementById('codeEditor').value = currentCode;
+      saveToStorage();
+      updateAllViews(true);
+      showToast('📥 コードを反映しました');
+    }
+
+    function hidePasteConfirm() {
+      const bar = document.getElementById('pasteConfirmBar');
+      bar.classList.add('hidden');
+      bar.classList.remove('flex');
+    }
+
+    async function pasteToField(fieldId) {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          document.getElementById(fieldId).value = text;
+          checkPatchMatch();
+          showToast('📋 貼り付けました');
+        }
+      } catch (e) {
+        document.getElementById(fieldId).focus();
+        showToast('入力欄を長押しして貼り付けてください');
+      }
+    }
+
+    let editorDebounce = null;
+    function onCodeEditorInput() {
+      currentCode = document.getElementById('codeEditor').value;
+      saveToStorage();
+      clearTimeout(editorDebounce);
+      editorDebounce = setTimeout(() => {
+        updateAllViews(false);
+      }, 250);
+    }
+
+    function insertSymbol(sym) {
+      const ta = document.getElementById('codeEditor');
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      pushUndo(currentCode);
+      currentCode = currentCode.slice(0, start) + sym + currentCode.slice(end);
+      ta.value = currentCode;
+      ta.focus();
+      ta.selectionStart = ta.selectionEnd = start + sym.length;
+      saveToStorage();
+      updateAllViews(false);
+    }
+
+    function changeFontSize(delta) {
+      editorFontSize = Math.max(10, Math.min(20, editorFontSize + delta));
+      document.getElementById('codeEditor').style.fontSize = editorFontSize + 'px';
+      const lbl = document.getElementById('fontSizeLabel');
+      if (lbl) lbl.textContent = editorFontSize + 'px';
+    }
+
+    function clearWorkspace() {
+      if (!currentCode) {
+        showToast('コードはすでに空です');
+        return;
+      }
+      pushUndo(currentCode);
+      currentCode = '';
+      lastOchafikHash = '';
+      hidePasteConfirm();
+      document.getElementById('codeEditor').value = '';
+      saveToStorage();
+      updateAllViews(true);
+      showToast('🗑 コードを全消去しました（↺戻すで復元可）');
+    }
+
+    // =========================================================================
+    // External File Import & Export (.html, .txt, .scad)
+    // =========================================================================
+    function triggerFileOpen() {
+      document.getElementById('fileInput').value = '';
+      document.getElementById('fileInput').click();
+    }
+
+    function setupFileInput() {
+      document.getElementById('fileInput').addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (file) readImportedFile(file);
+      });
+    }
+
+    function setupDragAndDrop() {
+      window.addEventListener('dragover', e => e.preventDefault());
+      window.addEventListener('drop', e => {
+        e.preventDefault();
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          readImportedFile(e.dataTransfer.files[0]);
+        }
+      });
+    }
+
+    function readImportedFile(file) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        pushUndo(currentCode);
+        currentCode = String(ev.target.result || '');
+        const cleanName = file.name.replace(/\.[^.]+$/, '') || file.name;
+        updateFileBadgeUI(cleanName);
+        document.getElementById('codeEditor').value = currentCode;
+        saveToStorage();
+        updateAllViews(true);
+        showToast(`📂 「${file.name}」を読み込みました`);
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
+
+    function openSaveModal() {
+      const saveInput = document.getElementById('saveFileName');
+      if (saveInput) {
+        saveInput.value = currentFileName !== 'untitled' ? currentFileName : generateDefaultProjectName();
+      }
+      renderBrowserProjectsList();
+      document.getElementById('saveModal').classList.remove('hidden');
+    }
+
+    function closeSaveModal() {
+      document.getElementById('saveModal').classList.add('hidden');
+    }
+
+    function downloadCodeAs(ext, normalizeScad = false) {
+      const base = (document.getElementById('saveFileName').value || currentFileName || 'project').trim().replace(/\.[^.]+$/, '');
+      const filename = base + ext;
+      const content = normalizeScad ? normalizeScadForOchafik(currentCode) : currentCode;
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      closeSaveModal();
+      showToast(`💾 ${filename} を端末へ出力しました`);
+    }
+
+    async function shareCodeFile() {
+      const effectiveMode = detectEffectiveMode(currentCode);
+      const ext = effectiveMode === 'scad' ? '.scad' : '.html';
+      const base = (document.getElementById('saveFileName').value || currentFileName || 'project').trim().replace(/\.[^.]+$/, '');
+      const filename = base + ext;
+      const file = new File([currentCode], filename, { type: 'text/plain' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: filename });
+          closeSaveModal();
+          return;
+        } catch (e) {}
+      }
+      downloadCodeAs(ext);
+    }
+
+    // =========================================================================
+    // Virtual Gamepad (Default OFF) & Logs & Navigation
+    // =========================================================================
+    function toggleGamepad(forceState) {
+      gamepadEnabled = typeof forceState === 'boolean' ? forceState : !gamepadEnabled;
+      const pad = document.getElementById('virtualGamepad');
+      const chk = document.getElementById('settingsGamepadToggle');
+      pad.classList.toggle('hidden', !gamepadEnabled);
+      if (chk) chk.checked = gamepadEnabled;
+      showToast(gamepadEnabled ? '🎮 仮想ゲームパッドを表示しました' : '🎮 仮想ゲームパッドを非表示にしました');
+    }
+
+    function setupVirtualGamepadEvents() {
+      document.querySelectorAll('.dpad-btn').forEach(btn => {
+        const key = btn.getAttribute('data-key');
+        const code = btn.getAttribute('data-code');
+        const kc = Number(btn.getAttribute('data-kc'));
+
+        const fire = type => {
+          const frame = document.getElementById('webPreviewFrame');
+          if (!frame || !frame.contentWindow) return;
+          try {
+            const ev = new KeyboardEvent(type, { key, code, keyCode: kc, which: kc, bubbles: true });
+            frame.contentWindow.document.dispatchEvent(ev);
+            frame.contentWindow.dispatchEvent(ev);
+          } catch (e) {}
+        };
+
+        btn.addEventListener('pointerdown', e => { e.preventDefault(); btn.classList.add('pressed'); fire('keydown'); });
+        btn.addEventListener('pointerup', e => { e.preventDefault(); btn.classList.remove('pressed'); fire('keyup'); });
+        btn.addEventListener('pointerleave', () => { btn.classList.remove('pressed'); fire('keyup'); });
+      });
+    }
+
+    window.addEventListener('message', e => {
+      if (e.data && e.data.source === 'playpatch-preview') {
+        addLog(e.data.type, e.data.text);
+      }
+    });
+
+    let logCount = 0;
+    function addLog(type, text) {
+      logCount++;
+      document.getElementById('logCountBadgeDesktop').textContent = logCount;
+      const container = document.getElementById('logContainer');
+      const div = document.createElement('div');
+      const color = type === 'error' ? 'text-rose-400 border-rose-900/60 bg-rose-950/30' : 'text-slate-300 border-slate-800 bg-slate-900/50';
+      div.className = `p-1.5 rounded border ${color} break-all`;
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function clearLogs() {
+      logCount = 0;
+      document.getElementById('logCountBadgeDesktop').textContent = '0';
+      document.getElementById('logContainer').innerHTML = '';
+    }
+
+    function switchLeftTab(tab) {
+      ['patch', 'tweak', 'code', 'log'].forEach(t => {
+        const panel = document.getElementById('panel-' + t);
+        const dTab = document.getElementById('dTab-' + t);
+        if (t === tab) {
+          panel.classList.remove('hidden');
+          panel.classList.add('flex');
+          if (dTab) dTab.className = 'px-3 py-1.5 text-xs font-semibold rounded-t-lg border-b-2 border-sky-400 text-sky-300 bg-slate-900 flex items-center gap-1 shrink-0';
+        } else {
+          panel.classList.add('hidden');
+          panel.classList.remove('flex');
+          if (dTab) dTab.className = 'px-3 py-1.5 text-xs font-semibold rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1 shrink-0';
+        }
+      });
+    }
+
+    function switchMobileView(view) {
+      const leftPane = document.getElementById('leftPane');
+      const rightPane = document.getElementById('rightPane');
+
+      ['play', 'patch', 'tweak', 'code', 'log'].forEach(v => {
+        const nav = document.getElementById('mNav-' + v);
+        if (nav) {
+          nav.className = v === view
+            ? 'flex flex-col items-center justify-center gap-0.5 text-sky-400 relative'
+            : 'flex flex-col items-center justify-center gap-0.5 text-slate-400 relative';
+        }
+      });
+
+      if (view === 'play') {
+        leftPane.classList.add('hidden');
+        rightPane.classList.remove('hidden');
+        rightPane.classList.add('flex');
+        runPreview(false);
+      } else {
+        rightPane.classList.add('hidden');
+        rightPane.classList.remove('flex');
+        leftPane.classList.remove('hidden');
+        switchLeftTab(view);
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+    function escapeJsStr(str) {
+      return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    }
+  </script>
+</body>
+</html>
