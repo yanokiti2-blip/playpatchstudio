@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>PlayPatch Studio — Web & OpenSCAD Customizer Edition</title>
+  <title>index</title>
+  <meta property="og:title" content="PlayPatch Studio - Web & OpenSCAD Customizer Edition" />
+  <script>document.title = 'PlayPatch Studio - Web & OpenSCAD Customizer Edition';</script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root {
@@ -71,7 +73,7 @@
     <!-- Left: Brand, Filename Badge, Mode Badge -->
     <div class="flex items-center gap-1.5 min-w-0">
       <div class="w-6 h-6 rounded-md bg-gradient-to-br from-sky-400 to-indigo-600 flex items-center justify-center font-bold text-slate-950 text-xs shrink-0 shadow">P</div>
-      <span class="font-bold text-xs tracking-tight truncate hidden lg:inline text-slate-100">PlayPatch</span>
+      <h1 class="font-bold text-xs tracking-tight truncate hidden lg:inline text-slate-100 m-0" title="PlayPatch Studio - Web & OpenSCAD Customizer Edition">PlayPatch Studio</h1>
       <button id="fileBadge" onclick="openSaveModal()" class="cursor-pointer text-[11px] mono bg-slate-800/90 hover:bg-slate-800 text-sky-300 border border-slate-700 px-2 py-0.5 rounded truncate max-w-[110px] sm:max-w-[180px] flex items-center gap-1" title="クリックしてブラウザ内保存・保存済み一覧を開く">
         <span id="fileBadgeText" class="truncate">untitled</span>
       </button>
@@ -132,12 +134,12 @@
         </button>
       </div>
 
-      <!-- Panel 1: Multi-line Patch -->
+      <!-- Panel 1: Multi-line Auto Patch -->
       <section id="panel-patch" class="flex-1 flex flex-col p-3 gap-2.5 overflow-y-auto">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
           <h2 class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-            <span>⚡ 複数行一括パッチ置換</span>
-            <span id="matchBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-normal">検索待ち</span>
+            <span>⚡ 複数行自動パッチ置換</span>
+            <span id="matchBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-normal">貼付待ち</span>
           </h2>
           <label class="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer select-none">
             <input type="checkbox" id="fuzzyToggle" checked onchange="syncFuzzySetting(this.checked)" class="rounded bg-slate-800 border-slate-600 text-sky-500" />
@@ -146,36 +148,27 @@
         </div>
 
         <!-- Search Target -->
-        <div class="flex-1 flex flex-col min-h-[120px]">
+        <div class="flex-1 flex flex-col min-h-[140px]">
           <div class="flex items-center justify-between mb-1">
             <label class="text-[11px] font-semibold text-amber-300">🔍 置換前の範囲（何行でも指定可）</label>
             <div class="flex gap-1">
               <button onclick="pasteToField('patchSearch')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">📋 貼付</button>
-              <button onclick="document.getElementById('patchSearch').value='';checkPatchMatch();" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700">クリア</button>
+              <button onclick="clearPatchField('patchSearch')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700">クリア</button>
             </div>
           </div>
-          <textarea id="patchSearch" oninput="checkPatchMatch()" placeholder="修正したい元のコード範囲をここに貼り付け..." class="w-full flex-1 bg-slate-950 border border-slate-700 focus:border-amber-400 rounded-lg p-2.5 text-xs mono text-slate-100 outline-none resize-none leading-relaxed"></textarea>
+          <textarea id="patchSearch" oninput="onPatchFieldInput('patchSearch')" onpaste="onPatchFieldPaste('patchSearch')" placeholder="修正したい元のコード範囲をここに貼り付け..." class="w-full flex-1 bg-slate-950 border border-slate-700 focus:border-amber-400 rounded-lg p-2.5 text-xs mono text-slate-100 outline-none resize-none leading-relaxed"></textarea>
         </div>
 
         <!-- Replace With -->
-        <div class="flex-1 flex flex-col min-h-[120px]">
+        <div class="flex-1 flex flex-col min-h-[140px]">
           <div class="flex items-center justify-between mb-1">
             <label class="text-[11px] font-semibold text-emerald-300">✨ 置換後の新しいコード</label>
             <div class="flex gap-1">
               <button onclick="pasteToField('patchReplace')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">📋 貼付</button>
-              <button onclick="document.getElementById('patchReplace').value='';" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700">クリア</button>
+              <button onclick="clearPatchField('patchReplace')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700">クリア</button>
             </div>
           </div>
-          <textarea id="patchReplace" placeholder="新しいコードをここに貼り付け（削除したい場合は空欄）..." class="w-full flex-1 bg-slate-950 border border-slate-700 focus:border-emerald-400 rounded-lg p-2.5 text-xs mono text-slate-100 outline-none resize-none leading-relaxed"></textarea>
-        </div>
-
-        <div class="flex gap-2 pt-1 shrink-0">
-          <button onclick="applyPatch(false)" id="btnApplyPatch" class="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg transition active:scale-[0.99]">
-            ⚡ 一発置換して反映
-          </button>
-          <button onclick="applyPatch(true)" class="px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700" title="一致するすべての箇所を置換">
-            全置換
-          </button>
+          <textarea id="patchReplace" oninput="onPatchFieldInput('patchReplace')" onpaste="onPatchFieldPaste('patchReplace')" placeholder="新しいコードをここに貼り付け（両方貼り付けると自動で置換反映されます）..." class="w-full flex-1 bg-slate-950 border border-slate-700 focus:border-emerald-400 rounded-lg p-2.5 text-xs mono text-slate-100 outline-none resize-none leading-relaxed"></textarea>
         </div>
       </section>
 
@@ -255,7 +248,7 @@
       </section>
     </div>
 
-    <!-- ================= RIGHT / PREVIEW PANE (ZERO EXTRA BARS — 100% RENDER AREA) ================= -->
+    <!-- ================= RIGHT / PREVIEW PANE (ZERO EXTRA BARS - 100% RENDER AREA) ================= -->
     <div id="rightPane" class="hidden md:flex flex-1 flex-col bg-slate-950 h-full overflow-hidden relative">
 
       <!-- Main Stage Area (Occupies 100% of Right Pane) -->
@@ -376,7 +369,7 @@
           <span class="text-[10px] text-slate-400">ブラウザのローカル領域に記憶されます</span>
         </div>
         <div class="flex gap-2">
-          <input type="text" id="saveFileName" placeholder="保存名を入力 (例: 三味線スタンドv2)" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 mono outline-none focus:border-sky-400" />
+          <input type="text" id="saveFileName" placeholder="保存名を入力 (例: 三味線スタンドv100)" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 mono outline-none focus:border-sky-400" />
           <button onclick="saveProjectToBrowser()" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs flex items-center gap-1.5 shrink-0 shadow-lg active:scale-95 transition">
             <span>📌</span><span>ブラウザに保存</span>
           </button>
@@ -479,6 +472,17 @@
           </label>
         </div>
 
+        <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
+          <div>
+            <div class="text-xs font-semibold text-slate-200">Ochafik内蔵カスタマイザーを表示</div>
+            <div class="text-[11px] text-slate-400">通常はOFF推奨（PlayPatch側の🎛カスタマイザーで日本語3Dポリゴン変換が自動動作します）</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" id="showOchafikCustomizer" onchange="syncToOchafikIframe(true)" class="sr-only peer" />
+            <div class="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:bg-sky-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+          </label>
+        </div>
+
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
           <button onclick="openOchafikExternal();closeSettingsModal();" class="py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow">
             <span>🚀</span><span>別タブでOchafikを開く</span>
@@ -543,11 +547,15 @@
     let collapsedSections = {};
     let pendingClipboardText = '';
     let ochafikSyncTimer = null;
+    let patchSearchPasted = false;
+    let patchReplacePasted = false;
 
     // =========================================================================
     // Initialization
     // =========================================================================
     window.addEventListener('DOMContentLoaded', () => {
+      document.title = 'PlayPatch Studio - Web & OpenSCAD Customizer Edition';
+
       const savedCode = localStorage.getItem(STORAGE_KEY_CODE);
       const savedName = localStorage.getItem(STORAGE_KEY_NAME);
 
@@ -564,6 +572,10 @@
       setupFileInput();
       setupVirtualGamepadEvents();
       updateAllViews(true);
+
+      if (currentCode && detectEffectiveMode(currentCode) === 'scad') {
+        switchLeftTab('tweak');
+      }
     });
 
     function updateFileBadgeUI(name) {
@@ -709,6 +721,9 @@
       document.getElementById('codeEditor').value = currentCode;
       saveToStorage();
       updateAllViews(true);
+      if (detectEffectiveMode(currentCode) === 'scad') {
+        switchLeftTab('tweak');
+      }
       closeSaveModal();
       showToast(`📂 「${proj.name}」を読み込みました`);
     }
@@ -850,6 +865,7 @@
       if (f1) f1.checked = checked;
       if (f2) f2.checked = checked;
       checkPatchMatch();
+      tryAutoApplyPatch();
     }
 
     function reloadActivePreview() {
@@ -927,8 +943,7 @@
           if (!parsedVal) continue;
 
           foundOnLine++;
-          const combinedComment = inlineComment || pendingCommentAbove || '';
-          const spec = parseScadCommentSpec(parsedVal, combinedComment, varName);
+          const spec = parseScadCommentSpec(parsedVal, inlineComment, pendingCommentAbove, varName);
 
           params.push({
             id: `scad_${i}_${varName}`,
@@ -985,18 +1000,23 @@
       return null;
     }
 
-    function parseScadCommentSpec(parsedVal, comment, varName) {
-      let description = comment;
-      const bracketMatches = [...comment.matchAll(/\[([^\]]+)\]/g)];
+    // OpenSCAD Customizer specification:
+    // Only parse [...] dropdown/range brackets from inlineComment (same line as variable),
+    // NEVER from aboveComment (which is descriptive text above the variable).
+    function parseScadCommentSpec(parsedVal, inlineComment, aboveComment, varName) {
+      const inl = (inlineComment || '').trim();
+      const abv = (aboveComment || '').trim();
+      let description = abv || inl;
+      const bracketMatches = [...inl.matchAll(/\[([^\]]+)\]/g)];
 
       if (parsedVal.type === 'boolean') {
-        let cleanDesc = comment;
+        let cleanDesc = abv || inl;
         if (bracketMatches.length > 0) {
           const bText = bracketMatches[0][1];
           if (/true\s*:/i.test(bText)) {
-            cleanDesc = bText;
+            cleanDesc = abv ? `${abv} (${bText})` : bText;
           } else if (/^true\s*,\s*false$/i.test(bText.trim())) {
-            cleanDesc = comment.replace(bracketMatches[0][0], '').trim();
+            cleanDesc = abv || inl.replace(bracketMatches[0][0], '').trim();
           }
         }
         return {
@@ -1011,7 +1031,8 @@
           const bText = bracketMatches[0][1].trim();
           const opts = parseDropdownItems(bText, 'string');
           if (opts.length > 0) {
-            const desc = comment.replace(bracketMatches[0][0], '').trim();
+            const restInline = inl.replace(bracketMatches[0][0], '').trim();
+            const desc = abv || restInline;
             return {
               widget: 'select',
               options: opts,
@@ -1021,7 +1042,7 @@
         }
         return {
           widget: 'text',
-          description: comment
+          description: abv || inl
         };
       }
 
@@ -1034,7 +1055,7 @@
 
         let min = num < 0 ? Math.floor(num * 2) : 0;
         let max = num === 0 ? 100 : (num > 0 ? Math.max(num * 2.5, num + 10) : 100);
-        if (varName.includes('clearance')) { min = 0; max = 0.5; }
+        if (varName.includes('clearance')) { min = -0.2; max = 0.5; }
         if (varName.includes('rot')) { min = -180; max = 360; }
 
         for (const bm of bracketMatches) {
@@ -1044,14 +1065,14 @@
             min = parseFloat(range3[1]);
             defaultStep = parseFloat(range3[2]);
             max = parseFloat(range3[3]);
-            description = comment.replace(bm[0], '').trim();
+            description = abv || inl.replace(bm[0], '').trim();
             break;
           }
           const range2 = bText.match(/^([+-]?\d+(?:\.\d+)?)\s*:\s*([+-]?\d+(?:\.\d+)?)$/);
           if (range2) {
             min = parseFloat(range2[1]);
             max = parseFloat(range2[2]);
-            description = comment.replace(bm[0], '').trim();
+            description = abv || inl.replace(bm[0], '').trim();
             break;
           }
           const jpRange = bText.match(/([+-]?\d+(?:\.\d+)?)\s*[〜~-]\s*([+-]?\d+(?:\.\d+)?)/);
@@ -1066,7 +1087,7 @@
               return {
                 widget: 'select',
                 options: opts,
-                description: comment.replace(bm[0], '').trim()
+                description: abv || inl.replace(bm[0], '').trim()
               };
             }
           }
@@ -1341,9 +1362,15 @@
 
       return `
         <div class="bg-slate-950/80 border border-slate-800/90 rounded-lg p-2.5">
-          <div class="text-xs font-bold mono text-slate-200 mb-1">${escapeHtml(p.name)}</div>
+          <div class="flex items-center justify-between gap-2 mb-1">
+            <span class="text-xs font-bold mono text-slate-200">${escapeHtml(p.name)}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-700/60">✨ 日本語・手入力対応</span>
+          </div>
           ${descHtml}
-          <input type="${p.widget === 'color' ? 'color' : 'text'}" value="${escapeHtml(String(p.value))}" onchange="updateParameterValue('${p.id}', this.value)" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-100" />
+          <div class="flex gap-1.5 mt-1.5">
+            <input type="${p.widget === 'color' ? 'color' : 'text'}" value="${escapeHtml(String(p.value))}" onchange="updateParameterValue('${p.id}', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}" placeholder="文字を入力してEnterまたは反映..." class="flex-1 bg-slate-900 border border-slate-700 focus:border-sky-400 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 outline-none" />
+            <button onclick="const inp=this.previousElementSibling;updateParameterValue('${p.id}', inp.value);" class="px-2.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shrink-0">反映</button>
+          </div>
         </div>
       `;
     }
@@ -1420,6 +1447,7 @@
 
       lines[p.lineIndex] = updatedCodePart + commentPart;
       currentCode = lines.join('\n');
+
       document.getElementById('codeEditor').value = currentCode;
       saveToStorage();
 
@@ -1490,7 +1518,7 @@
           continue;
         }
 
-        const spec = parseScadCommentSpec(parsed, commentText, varName);
+        const spec = parseScadCommentSpec(parsed, commentText, '', varName);
         if (spec.description) {
           outLines.push(`${indent}// ${spec.description}`);
         }
@@ -1528,6 +1556,7 @@
 
     async function buildOchafikUrl(code) {
       const normalized = normalizeScadForOchafik(code);
+      const showInternalCustomizer = Boolean(document.getElementById('showOchafikCustomizer')?.checked);
       const stateObj = {
         params: {
           activePath: '/playground.scad',
@@ -1541,7 +1570,7 @@
             mode: 'multi',
             editor: false,
             viewer: true,
-            customizer: true
+            customizer: showInternalCustomizer
           },
           color: '#38bdf8',
           showAxes: true,
@@ -1574,7 +1603,7 @@
       } else {
         iframe.src = url;
       }
-      addLog('info', 'Ochafikエンジンへコードとカスタマイザー定義を同期しました');
+      addLog('info', 'Ochafikエンジンへコード（日本語3Dポリゴン変換済）を同期しました');
     }
 
     async function openOchafikExternal() {
@@ -1588,7 +1617,7 @@
       } catch (e) {}
       const url = await buildOchafikUrl(currentCode);
       window.open(url, '_blank', 'noopener');
-      showToast('🚀 カスタマイザー互換形式でOchafikを開きました');
+      showToast('🚀 日本語ポリゴン変換済形式でOchafikを開きました');
     }
 
     async function copyNormalizedScad() {
@@ -1599,7 +1628,7 @@
       const normalized = normalizeScadForOchafik(currentCode);
       try {
         await navigator.clipboard.writeText(normalized);
-        showToast('✓ Ochafikカスタマイザー互換コードをコピーしました');
+        showToast('✓ 日本語ポリゴン変換済・Ochafik互換コードをコピーしました');
       } catch (e) {
         showToast('コピーに失敗しました');
       }
@@ -1617,7 +1646,7 @@
     }
 
     // =========================================================================
-    // Multi-line Fuzzy Patch Engine
+    // Multi-line Auto Fuzzy Patch Engine
     // =========================================================================
     function buildFuzzyRegex(searchStr) {
       const trimmed = searchStr.trim();
@@ -1633,7 +1662,7 @@
       const fuzzy = document.getElementById('fuzzyToggle').checked;
 
       if (!searchStr.trim()) {
-        badge.textContent = '検索待ち';
+        badge.textContent = '貼付待ち';
         badge.className = 'text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-normal';
         return 0;
       }
@@ -1663,7 +1692,57 @@
       return count;
     }
 
-    function applyPatch(replaceAll = false) {
+    function onPatchFieldInput(fieldId) {
+      const val = document.getElementById(fieldId).value;
+      if (!val.trim()) {
+        if (fieldId === 'patchSearch') patchSearchPasted = false;
+        if (fieldId === 'patchReplace') patchReplacePasted = false;
+      }
+      if (fieldId === 'patchSearch') checkPatchMatch();
+    }
+
+    function clearPatchField(fieldId) {
+      document.getElementById(fieldId).value = '';
+      if (fieldId === 'patchSearch') {
+        patchSearchPasted = false;
+        checkPatchMatch();
+      } else if (fieldId === 'patchReplace') {
+        patchReplacePasted = false;
+      }
+    }
+
+    function onPatchFieldPaste(fieldId) {
+      setTimeout(() => {
+        markPatchFieldPasted(fieldId);
+      }, 0);
+    }
+
+    function markPatchFieldPasted(fieldId) {
+      const val = document.getElementById(fieldId).value;
+      if (!val) return false;
+      if (fieldId === 'patchSearch') patchSearchPasted = true;
+      if (fieldId === 'patchReplace') patchReplacePasted = true;
+      checkPatchMatch();
+      return tryAutoApplyPatch();
+    }
+
+    function tryAutoApplyPatch() {
+      if (!patchSearchPasted || !patchReplacePasted) return false;
+      const searchStr = document.getElementById('patchSearch').value;
+      const replaceStr = document.getElementById('patchReplace').value;
+      if (!searchStr.trim() || !replaceStr) return false;
+
+      const matchCount = checkPatchMatch();
+      if (matchCount === 0) {
+        showToast('✕ 一致するコード範囲が見つかりません');
+        return false;
+      }
+
+      applyPatch(false, true);
+      return true;
+    }
+
+    function applyPatch(replaceAll = false, isAuto = false) {
       const searchStr = document.getElementById('patchSearch').value;
       const replaceStr = document.getElementById('patchReplace').value;
       const fuzzy = document.getElementById('fuzzyToggle').checked;
@@ -1700,14 +1779,19 @@
         }
       }
 
+      patchSearchPasted = false;
+      patchReplacePasted = false;
+
       document.getElementById('codeEditor').value = currentCode;
       saveToStorage();
       updateAllViews(true);
-      showToast('⚡ パッチ置換を適用しました');
 
-      if (window.innerWidth < 768) {
-        switchMobileView('play');
+      const badge = document.getElementById('matchBadge');
+      if (badge && isAuto) {
+        badge.textContent = '⚡ 自動置換完了';
+        badge.className = 'text-[11px] px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-700 font-bold';
       }
+      showToast('⚡ 自動置換を反映しました（↺戻すで復元可）');
     }
 
     // =========================================================================
@@ -1825,7 +1909,10 @@
           document.getElementById('codeEditor').value = currentCode;
           saveToStorage();
           updateAllViews(true);
-          showToast('📥 コードを貼り付けました');
+          if (detectEffectiveMode(currentCode) === 'scad') {
+            switchLeftTab('tweak');
+          }
+          showToast('📥 コードを貼り付けました（日本語3Dポリゴン対応）');
         } else {
           pendingClipboardText = text;
           const bar = document.getElementById('pasteConfirmBar');
@@ -1853,7 +1940,10 @@
       document.getElementById('codeEditor').value = currentCode;
       saveToStorage();
       updateAllViews(true);
-      showToast('📥 コードを反映しました');
+      if (detectEffectiveMode(currentCode) === 'scad') {
+        switchLeftTab('tweak');
+      }
+      showToast('📥 コードを反映しました（日本語3Dポリゴン対応）');
     }
 
     function hidePasteConfirm() {
@@ -1867,8 +1957,17 @@
         const text = await navigator.clipboard.readText();
         if (text) {
           document.getElementById(fieldId).value = text;
-          checkPatchMatch();
-          showToast('📋 貼り付けました');
+          if (fieldId === 'patchSearch' || fieldId === 'patchReplace') {
+            const applied = markPatchFieldPasted(fieldId);
+            if (!applied) {
+              showToast('📋 貼り付けました');
+            }
+          } else {
+            checkPatchMatch();
+            showToast('📋 貼り付けました');
+          }
+        } else {
+          showToast('クリップボードが空です');
         }
       } catch (e) {
         document.getElementById(fieldId).focus();
@@ -1956,6 +2055,9 @@
         document.getElementById('codeEditor').value = currentCode;
         saveToStorage();
         updateAllViews(true);
+        if (detectEffectiveMode(currentCode) === 'scad') {
+          switchLeftTab('tweak');
+        }
         showToast(`📂 「${file.name}」を読み込みました`);
       };
       reader.readAsText(file, 'UTF-8');
